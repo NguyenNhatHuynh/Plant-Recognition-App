@@ -59,10 +59,10 @@ Dự án được xây dựng bằng Flutter với cấu trúc thư mục rõ r�
 
 1. Clone dự án về máy của bạn:
    ```bash
-   git clone https://github.com/NguyenNhatHuynh/Time-Tracker-App.git
+   git clone https://github.com/NguyenNhatHuynh/Plant-Recognition-App.git
 2. Chuyển đến thư mục dự án:
    ```bash
-   cd Time-Tracker-App
+   cd Plant-Recognition-App
 3. Cài đặt các phụ thuộc:
    ```bash
    flutter pub get
