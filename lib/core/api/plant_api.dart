@@ -1,28 +1,26 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:plant_recognition_app/utils/constants.dart';
+
 
 class PlantApi {
-  final String apiKey =
-      'dwY958M8MkZNCmxyzhMVNahxEHfapTXqXi4nsvVrVNWp5u8ufc'; // Thay bằng API key của bạn.
+  Future<Map<String, dynamic>> identifyPlant(File image) async {
+    final url = Uri.parse(Constants.apiBaseUrl);
 
-  Future<Map<String, dynamic>> identifyPlant(String imagePath) async {
-    final url = Uri.parse('https://api.plant.id/v2/identify');
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $apiKey',
-    };
-    final body = jsonEncode({
-      'images': [base64Encode(File(imagePath).readAsBytesSync())],
-      'organs': ['leaf'], // Loại hình ảnh: lá, hoa...
-    });
+    final request = http.MultipartRequest('POST', url)
+      ..headers['Authorization'] = 'Bearer ${Constants.apiKey}'
+      ..fields['modifiers'] = 'crops_fast'
+      ..fields['plant_details'] = 'common_names,url'
+      ..files.add(await http.MultipartFile.fromPath('images', image.path));
 
-    final response = await http.post(url, headers: headers, body: body);
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      return json.decode(response.body);
     } else {
-      throw Exception('Failed to identify plant');
+      throw Exception('Failed to identify plant: ${response.body}');
     }
   }
 }
