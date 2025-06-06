@@ -1,48 +1,42 @@
-// features/identification/view/identify_screen.dart
-import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/api/plant_api.dart';
+import 'package:plant_recognition_app/core/api/plant_api.dart';
 
 class IdentifyScreen extends StatefulWidget {
   const IdentifyScreen({Key? key}) : super(key: key);
 
   @override
-  _IdentifyScreenState createState() => _IdentifyScreenState();
+  State<IdentifyScreen> createState() => _IdentifyScreenState();
 }
 
 class _IdentifyScreenState extends State<IdentifyScreen> {
   final PlantApi _plantApi = PlantApi();
   File? _selectedImage;
-  String? _result;
+  Map<String, dynamic>? _plantInfo;
+  String _error = "";
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
     if (pickedFile != null) {
       setState(() {
         _selectedImage = File(pickedFile.path);
+        _plantInfo = null;
+        _error = "";
       });
-    }
-  }
 
-  Future<void> _identifyPlant() async {
-    if (_selectedImage == null) {
-      setState(() {
-        _result = 'Please select an image first!';
-      });
-      return;
-    }
-
-    try {
-      final result = await _plantApi.identifyPlant(_selectedImage!);
-      setState(() {
-        _result = result['suggestions'][0]['plant_name'];
-      });
-    } catch (e) {
-      setState(() {
-        _result = 'Error: $e';
-      });
+      try {
+        final response = await _plantApi.identifyPlant(_selectedImage!);
+        setState(() {
+          _plantInfo = response;
+        });
+      } catch (e) {
+        setState(() {
+          _error = "Error: ${e.toString()}";
+        });
+      }
     }
   }
 
@@ -50,32 +44,49 @@ class _IdentifyScreenState extends State<IdentifyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Identify Plant'),
+        title: const Text('Plant Identifier'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_selectedImage != null)
-              Image.file(_selectedImage!,
-                  height: 200, width: 200, fit: BoxFit.cover),
+              Image.file(
+                _selectedImage!,
+                height: 200,
+                fit: BoxFit.cover,
+              ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _pickImage,
-              child: const Text('Select Image'),
+              child: const Text('Pick an Image'),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _identifyPlant,
-              child: const Text('Identify Plant'),
-            ),
-            const SizedBox(height: 20),
-            if (_result != null)
-              Text(
-                _result!,
-                style: const TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
+            if (_error.isNotEmpty)
+              Text(_error, style: const TextStyle(color: Colors.red)),
+            if (_plantInfo != null) ...[
+              Text("Scientific Name: ${_plantInfo!['plant_name']}",
+                  style: const TextStyle(fontSize: 16)),
+              const SizedBox(height: 20),
+              Text("Similar Images:",
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              if (_plantInfo!['similar_images'] != null)
+                Wrap(
+                  spacing: 10,
+                  children: (_plantInfo!['similar_images'] as List)
+                      .map<Widget>(
+                        (img) => Image.network(
+                          img['url_small'],
+                          height: 100,
+                          width: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                      .toList(),
+                ),
+            ],
           ],
         ),
       ),
