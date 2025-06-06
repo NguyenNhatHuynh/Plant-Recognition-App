@@ -46,5 +46,6 @@ app.*.map.json
 /android/app/release
 
 
+/note.md
 lib/utils/constants.dart
 

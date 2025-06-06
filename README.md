@@ -11,13 +11,15 @@
 - Tích hợp công nghệ AI để cải thiện độ chính xác và hiệu suất nhận diện.
 
 ---
-
-## Các Tính Năng Chính 🛠️  
-- **Nhận diện loài cây** 🌳: Phân tích hình ảnh và xác định tên cây.  
-- **Cung cấp thông tin sinh học** 📚: Hiển thị đặc điểm, môi trường sống và ứng dụng của cây.  
-- **Lịch sử tìm kiếm** 📜: Lưu trữ các lần nhận diện để người dùng tham khảo.  
-- **Giao diện thân thiện** 🎨: Thiết kế trực quan và dễ sử dụng với chế độ sáng/tối.  
-
+## Các tính năng cốt lõi:
+- **Chụp ảnh bằng camera** của thiết bị để nhận dạng cây
+- **Tải ảnh lên từ thư viện** như một phương pháp nhập liệu thay thế
+- **Nhận dạng loài cây** với kết quả trực quan
+- **Các trang thông tin chi tiết** về các loài cây đã xác định
+- **Duyệt tính năng để khám phá** thư viện loài cây
+- **Lịch sử** để xem lại các lần nhận dạng trước đây
+- **Chức năng ngoại tuyến** đối với các cây đã xác định trước đó
+- **Đánh dấu các cây yêu thích** để tham khảo nhanh
 ---
 
 ## Cấu Trúc Dự Án 📁  

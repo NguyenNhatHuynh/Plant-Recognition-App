@@ -1,30 +1,50 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// lib/test/widget_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:plant_recognition_app/theme/app_theme.dart';
+import 'package:plant_recognition_app/ui/screens/library_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:plant_recognition_app/main.dart';
+import 'package:plant_recognition_app/services/database_service.dart';
+import 'package:plant_recognition_app/ui/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('HomeScreen loads with bottom navigation bar',
+      (WidgetTester tester) async {
+    // Create a mock DatabaseService
+    final databaseService = DatabaseService();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Build the app with Provider and trigger a frame
+    await tester.pumpWidget(
+      Provider<DatabaseService>(
+        create: (_) => databaseService,
+        child: MaterialApp(
+          theme: appTheme(),
+          home: HomeScreen(),
+        ),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Wait for any asynchronous operations (e.g., database initialization)
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that the HomeScreen loads
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    // Verify that the bottom navigation bar is present
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
+
+    // Verify that specific tabs are present (e.g., "Scan", "Library")
+    expect(find.text('Scan'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
+    expect(find.text('History'), findsOneWidget);
+    expect(find.text('Favorites'), findsOneWidget);
+
+    // Simulate tapping the "Library" tab
+    await tester.tap(find.text('Library'));
+    await tester.pumpAndSettle();
+
+    // Verify that the LibraryScreen is displayed
+    expect(find.byType(LibraryScreen), findsOneWidget);
   });
 }

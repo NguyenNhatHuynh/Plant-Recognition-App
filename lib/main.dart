@@ -1,23 +1,31 @@
-// main.dart
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:plant_recognition_app/screens/identify_screen.dart';
+import 'package:provider/provider.dart';
+import 'services/database_service.dart';
+import 'theme/app_theme.dart';
+import 'ui/screens/home_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final databaseService = DatabaseService();
+  runApp(MyApp(databaseService: databaseService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final DatabaseService databaseService;
+
+  MyApp({required this.databaseService});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Plant Identifier',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
+    return Provider<DatabaseService>(
+      create: (_) => databaseService,
+      child: MaterialApp(
+        title: 'Plant Recognition App',
+        theme: appTheme(),
+        home: HomeScreen(),
+        debugShowCheckedModeBanner: false,
       ),
-      home: const IdentifyScreen(),
     );
   }
 }
