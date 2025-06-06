@@ -89,6 +89,6 @@ Dự án được xây dựng bằng Flutter với cấu trúc thư mục rõ r�
       
 ## Tác giả 👨‍💻
 Tôi sẽ rất cảm kích nếu bạn có thể cho kho lưu trữ này một ngôi sao 🌟. Nó sẽ giúp những người khác khám phá ra điều này. Cảm ơn vì sự hỗ trợ của bạn [Xoan Dev]👨‍💻
-- [x] status Project: in progress
+- [ ] Status : In Progress 
 
 
