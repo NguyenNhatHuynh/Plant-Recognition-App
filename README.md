@@ -1,4 +1,4 @@
-# Ứng Dụng Nhận Diện Cây Cối 🌿  
+# Ứng Dụng Nhận Diện Cây🌿  
 [![Flutter](https://img.shields.io/badge/Flutter-Framework-blue)](https://flutter.dev/) [![Dart](https://img.shields.io/badge/Dart-Language-blue)](https://dart.dev/)
 
 Ứng dụng **"Nhận Diện Cây Cối"** hỗ trợ người dùng xác định tên cây, thông tin sinh học và môi trường sống của các loài cây dựa trên hình ảnh được tải lên. Ứng dụng cung cấp giao diện thân thiện và tích hợp trí tuệ nhân tạo để nâng cao độ chính xác.
