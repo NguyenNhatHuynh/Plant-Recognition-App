@@ -29,6 +29,7 @@ dependencies:
   url_launcher: ^6.0.20
   provider: ^6.1.2
   fluttertoast: ^8.2.1
+  flutter_dotenv: ^6.0.1
 
   camera: ^0.10.0 # Chụp ảnh bằng camera
   google_fonts: ^6.0.0 # Sử dụng font Inter
@@ -86,3 +87,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  assets:
+    - .env

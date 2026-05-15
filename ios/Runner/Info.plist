@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần quyền camera để chụp ảnh cây cối và nhận diện.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần quyền thư viện ảnh để chọn ảnh cây cối có sẵn.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng có thể lưu ảnh kết quả khi bạn chọn lưu lại.</string>
 </dict>
 </plist>

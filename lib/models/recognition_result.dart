@@ -1,44 +1,39 @@
 import 'plant.dart';
+import 'recognition_candidate.dart';
 
-// lib/models/recognition_result.dart
 class RecognitionResult {
-  final String name; // Tên cây được nhận dạng
-  final String scientificName; // Tên khoa học
-  final String description; // Mô tả chi tiết
-  final double confidence; // Độ tin cậy của nhận dạng (0-1)
-  final String imagePath; // Đường dẫn ảnh đã nhận dạng
+  final RecognitionCandidate primary;
+  final List<RecognitionCandidate> alternatives;
+  final String analysisNote;
+  final String imagePath;
 
-  RecognitionResult({
-    required this.name,
-    required this.scientificName,
-    required this.description,
-    required this.confidence,
+  const RecognitionResult({
+    required this.primary,
+    required this.alternatives,
+    required this.analysisNote,
     required this.imagePath,
   });
 
-  // Tạo từ JSON (từ API như Plant.id)
-  factory RecognitionResult.fromJson(Map<String, dynamic> json) {
+  factory RecognitionResult.fromGeminiJson(
+    Map<String, dynamic> json, {
+    required String imagePath,
+  }) {
+    final primary = RecognitionCandidate.fromMap(
+      Map<String, dynamic>.from(json['primary'] as Map),
+    );
+    final alternatives = <RecognitionCandidate>[
+      for (final item in (json['alternatives'] as List? ?? const []))
+        RecognitionCandidate.fromMap(Map<String, dynamic>.from(item as Map)),
+    ];
     return RecognitionResult(
-      name: json['suggestions'][0]['plant_name'] ?? 'Unknown',
-      scientificName: json['suggestions'][0]['plant_details']
-              ['scientific_name'] ??
-          'Unknown',
-      description: json['suggestions'][0]['plant_details']['wiki_description']
-              ['value'] ??
-          'No description available',
-      confidence:
-          (json['suggestions'][0]['probability'] as num?)?.toDouble() ?? 0.0,
-      imagePath: json['images'][0]['url'] ?? '',
+      primary: primary,
+      alternatives: alternatives,
+      analysisNote: json['analysis_note']?.toString() ?? '',
+      imagePath: imagePath,
     );
   }
 
-  // Chuyển đổi thành Plant để lưu vào cơ sở dữ liệu
   Plant toPlant() {
-    return Plant(
-      name: name,
-      scientificName: scientificName,
-      description: description,
-      imagePath: imagePath,
-    );
+    return primary.toPlant(imagePath: imagePath);
   }
 }

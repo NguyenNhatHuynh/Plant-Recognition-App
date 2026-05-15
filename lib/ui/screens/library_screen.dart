@@ -1,52 +1,85 @@
-// lib/ui/screens/library_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:plant_recognition_app/services/database_service.dart';
-import 'package:plant_recognition_app/models/plant.dart';
-import 'package:plant_recognition_app/ui/screens/plant_detail_screen.dart';
-import 'package:plant_recognition_app/ui/widgets/plant_card.dart';
 
-class LibraryScreen extends StatelessWidget {
+import '../../models/plant.dart';
+import '../../services/database_service.dart';
+import '../../state/app_state.dart';
+import '../widgets/plant_card.dart';
+import 'plant_detail_screen.dart';
+
+class LibraryScreen extends StatefulWidget {
+  const LibraryScreen({super.key});
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dbService = Provider.of<DatabaseService>(context, listen: false);
+    final revision = context.watch<AppState>().revision;
+    final dbService = context.read<DatabaseService>();
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Thư viện'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Library',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+              TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Tìm theo tên, họ, mô tả...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: const Color(0xFFF5F7F5),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Expanded(
                 child: FutureBuilder<List<Plant>>(
-                  future: dbService.getHistory(),
+                  key: ValueKey('${revision}_${_searchController.text}'),
+                  future: dbService.getAllPlants(query: _searchController.text),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator());
                     }
-                    if (snapshot.hasError || snapshot.data == null) {
-                      return Center(child: Text('No plants in library'));
+                    final plants = snapshot.data ?? const <Plant>[];
+                    if (plants.isEmpty) {
+                      return const Center(
+                        child: Text('Không tìm thấy loài phù hợp.'),
+                      );
                     }
-                    final plants = snapshot.data!;
                     return ListView.builder(
                       itemCount: plants.length,
                       itemBuilder: (context, index) {
+                        final plant = plants[index];
                         return PlantCard(
-                          plant: plants[index],
+                          plant: plant,
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    PlantDetailScreen(plant: plants[index]),
+                                builder: (_) => PlantDetailScreen(plant: plant),
                               ),
                             );
                           },

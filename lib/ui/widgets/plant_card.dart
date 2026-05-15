@@ -1,63 +1,64 @@
-// lib/ui/widgets/plant_card.dart
 import 'package:flutter/material.dart';
-import 'package:plant_recognition_app/models/plant.dart';
+
+import '../../models/plant.dart';
+import 'plant_image.dart';
 
 class PlantCard extends StatelessWidget {
   final Plant plant;
   final VoidCallback onTap;
+  final bool compact;
 
-  PlantCard({required this.plant, required this.onTap});
+  const PlantCard({
+    super.key,
+    required this.plant,
+    required this.onTap,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: EdgeInsets.only(right: 16, bottom: 16),
+      elevation: 0,
+      color: Colors.white,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsets.only(right: 16, bottom: 16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 150,
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(
+          width: compact ? 150 : double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                child: Image.network(
-                  plant.imagePath,
-                  height: 120,
-                  width: 150,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 120,
-                    width: 150,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.image_not_supported, color: Colors.grey),
-                  ),
-                ),
+              PlantImage(
+                plant: plant,
+                height: compact ? 120 : 140,
+                width: compact ? 150 : double.infinity,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               Padding(
-                padding: EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plant.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2D6A4F),
-                          ),
+                      plant.commonName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1B4332),
+                          ),
                     ),
                     Text(
                       plant.scientificName,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Color(0xFFA98467),
-                          ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF7F5539),
+                          ),
                     ),
                   ],
                 ),

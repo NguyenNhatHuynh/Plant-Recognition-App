@@ -1,80 +1,134 @@
-// lib/ui/screens/camera_screen.dart
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'recognition_screen.dart';
+
 class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
   @override
-  _CameraScreenState createState() => _CameraScreenState();
+  State<CameraScreen> createState() => _CameraScreenState();
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  late CameraController _controller;
   final ImagePicker _picker = ImagePicker();
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeCamera();
-  }
-
-  Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    _controller = CameraController(cameras[0], ResolutionPreset.medium);
-    await _controller.initialize();
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _takePicture() async {
-    if (!_controller.value.isInitialized) return;
-    final XFile photo = await _controller.takePicture();
-    // Xử lý nhận dạng cây (sẽ tích hợp sau)
-    Navigator.pop(context); // Quay lại HomeScreen tạm thời
-  }
-
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      // Xử lý nhận dạng cây (sẽ tích hợp sau)
-      Navigator.pop(context); // Quay lại HomeScreen tạm thời
+  Future<void> _pickImage(ImageSource source) async {
+    final image = await _picker.pickImage(
+      source: source,
+      imageQuality: 90,
+      maxWidth: 1600,
+    );
+    if (image == null || !mounted) {
+      return;
     }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RecognitionScreen(imageFile: image),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_controller.value.isInitialized) {
-      return Center(child: CircularProgressIndicator());
-    }
     return Scaffold(
-      body: Stack(
-        children: [
-          CameraPreview(_controller),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  FloatingActionButton(
-                    onPressed: _takePicture,
-                    child: Icon(Icons.camera),
+      appBar: AppBar(
+        title: const Text('Quét cây'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Chọn nguồn ảnh',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-                  FloatingActionButton(
-                    onPressed: _pickImage,
-                    child: Icon(Icons.photo_library),
-                  ),
-                ],
-              ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Chụp ảnh bằng camera hoặc chọn ảnh từ thư viện để Gemini phân tích.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            _ActionTile(
+              icon: Icons.camera_alt,
+              title: 'Chụp ảnh bằng camera',
+              subtitle: 'Mở camera thiết bị và chụp ngay.',
+              onTap: () => _pickImage(ImageSource.camera),
+            ),
+            const SizedBox(height: 16),
+            _ActionTile(
+              icon: Icons.photo_library_outlined,
+              title: 'Chọn từ thư viện',
+              subtitle: 'Tải ảnh có sẵn trên thiết bị.',
+              onTap: () => _pickImage(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF1F8F4),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                height: 52,
+                width: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D6A4F).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: const Color(0xFF2D6A4F)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(subtitle),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

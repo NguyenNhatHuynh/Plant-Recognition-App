@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 
 class CustomTabBar extends StatelessWidget {
   final int selectedIndex;
-  final Function(int) onTap;
+  final ValueChanged<int> onTap;
 
-  CustomTabBar({required this.selectedIndex, required this.onTap});
+  const CustomTabBar({
+    super.key,
+    required this.selectedIndex,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +18,7 @@ class CustomTabBar extends StatelessWidget {
       onTap: onTap,
       selectedItemColor: Theme.of(context).colorScheme.tertiary,
       unselectedItemColor: Theme.of(context).colorScheme.secondary,
-      items: [
+      items: const [
         BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: 'Scan'),
         BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Library'),
         BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 ThemeData appTheme() {
   return ThemeData(
+    useMaterial3: true,
     primaryColor: Color(0xFF2D6A4F),
     colorScheme: ColorScheme.fromSwatch().copyWith(
       secondary: Color(0xFFA98467),
@@ -17,14 +18,15 @@ ThemeData appTheme() {
       bodyMedium: GoogleFonts.inter(fontSize: 14),
       bodySmall: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
     ),
-    cardTheme: CardTheme(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: const Color(0xFFF7FAF7),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
-      elevation: 10,
+      elevation: 0,
     ),
   );
 }

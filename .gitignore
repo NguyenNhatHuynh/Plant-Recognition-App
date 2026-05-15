@@ -45,6 +45,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+.env
 
 /note.md
 lib/utils/constants.dart
