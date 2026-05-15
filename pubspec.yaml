@@ -30,9 +30,10 @@ dependencies:
   provider: ^6.1.2
   fluttertoast: ^8.2.1
   flutter_dotenv: ^6.0.1
+  supabase_flutter: ^2.12.4
 
   camera: ^0.10.0 # Chụp ảnh bằng camera
-  google_fonts: ^6.0.0 # Sử dụng font Inter
+  google_fonts: ^8.1.0 # Sử dụng font Inter
   flutter_spinkit: ^5.2.0 # Hiệu ứng tải
   lottie: ^2.0.0 # Hiệu ứng hoạt hình lá
 

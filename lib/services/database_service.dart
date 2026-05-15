@@ -10,7 +10,7 @@ import '../models/recognition_result.dart';
 class DatabaseService {
   static Database? _db;
   static const String _databaseName = 'plants.db';
-  static const int _version = 2;
+  static const int _version = 3;
 
   Future<Database> get database async {
     if (_db != null) return _db!;
@@ -23,22 +23,22 @@ class DatabaseService {
     return openDatabase(
       dbPath,
       version: _version,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (db, version) async {
         await _createSchema(db);
         await _seedPlants(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        await db.execute('DROP TABLE IF EXISTS recognition_records');
-        await db.execute('DROP TABLE IF EXISTS plants');
-        await _createSchema(db);
-        await _seedPlants(db);
+        await _runMigrations(db, oldVersion, newVersion);
       },
     );
   }
 
   Future<void> _createSchema(Database db) async {
     await db.execute('''
-      CREATE TABLE plants (
+      CREATE TABLE IF NOT EXISTS plants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         common_name TEXT NOT NULL,
         scientific_name TEXT NOT NULL UNIQUE,
@@ -54,7 +54,7 @@ class DatabaseService {
     ''');
 
     await db.execute('''
-      CREATE TABLE recognition_records (
+      CREATE TABLE IF NOT EXISTS recognition_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         plant_id INTEGER NOT NULL,
         image_path TEXT NOT NULL,
@@ -64,6 +64,34 @@ class DatabaseService {
         FOREIGN KEY (plant_id) REFERENCES plants (id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_plants_common_name
+      ON plants (common_name)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_plants_is_favorite
+      ON plants (is_favorite)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_records_captured_at
+      ON recognition_records (captured_at DESC)
+    ''');
+  }
+
+  Future<void> _runMigrations(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 3) {
+      await _createSchema(db);
+      await _seedPlants(db);
+    }
+
+    if (newVersion > oldVersion) {
+      await _createSchema(db);
+    }
   }
 
   Future<void> _seedPlants(Database db) async {

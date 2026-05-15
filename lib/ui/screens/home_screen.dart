@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/plant.dart';
 import '../../models/recognition_record.dart';
+import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
 import '../widgets/plant_card.dart';
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen>
   int _selectedIndex = 0;
   late final AnimationController _controller;
   late final Animation<double> _animation;
+  late final List<Widget> _screens;
 
   @override
   void initState() {
@@ -33,6 +35,12 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 500),
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _screens = [
+      _buildHomeTab(),
+      const LibraryScreen(),
+      const HistoryScreen(),
+      const FavoritesScreen(),
+    ];
     _controller.forward();
   }
 
@@ -51,27 +59,52 @@ class _HomeScreenState extends State<HomeScreen>
       ..forward();
   }
 
-  Widget _buildHomeTab(BuildContext context) {
-    final revision = context.watch<AppState>().revision;
-    final dbService = context.read<DatabaseService>();
+  Future<void> _signOut() async {
+    final authService = context.read<AuthService>();
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    try {
+      await authService.signOut();
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bạn đã đăng xuất.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: errorColor,
+        ),
+      );
+    }
+  }
 
+  Widget _buildHomeTab() {
     return SafeArea(
-      child: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0.0, 20.0 * (1.0 - _animation.value)),
-            child: Opacity(
-              opacity: _animation.value,
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+      child: Consumer2<AppState, DatabaseService>(
+        builder: (context, appState, dbService, _) {
+          final revision = appState.revision;
+          return AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0.0, 20.0 * (1.0 - _animation.value)),
+                child: Opacity(
+                  opacity: _animation.value,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       Container(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -125,6 +158,13 @@ class _HomeScreenState extends State<HomeScreen>
                                         ),
                                       );
                                     },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.logout_rounded,
+                                      color: Colors.white70,
+                                    ),
+                                    onPressed: _signOut,
                                   ),
                                 ],
                               ),
@@ -411,11 +451,13 @@ class _HomeScreenState extends State<HomeScreen>
                         },
                       ),
                       const SizedBox(height: 24),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
@@ -424,15 +466,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screens = <Widget>[
-      _buildHomeTab(context),
-      const LibraryScreen(),
-      const HistoryScreen(),
-      const FavoritesScreen(),
-    ];
-
     return Scaffold(
-      body: screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onTabTapped,

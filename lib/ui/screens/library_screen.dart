@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,11 +18,26 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _query = value.trim();
+      });
+    });
   }
 
   @override
@@ -42,7 +59,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             children: [
               TextField(
                 controller: _searchController,
-                onChanged: (_) => setState(() {}),
+                onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: 'Tìm theo tên, họ, mô tả...',
                   prefixIcon: const Icon(Icons.search),
@@ -57,8 +74,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(height: 16),
               Expanded(
                 child: FutureBuilder<List<Plant>>(
-                  key: ValueKey('${revision}_${_searchController.text}'),
-                  future: dbService.getAllPlants(query: _searchController.text),
+                  key: ValueKey('${revision}_$_query'),
+                  future: dbService.getAllPlants(query: _query),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());

@@ -18,12 +18,15 @@ class RecognitionResult {
     Map<String, dynamic> json, {
     required String imagePath,
   }) {
-    final primary = RecognitionCandidate.fromMap(
-      Map<String, dynamic>.from(json['primary'] as Map),
-    );
+    final primaryMap = _asStringMap(json['primary']);
+    if (primaryMap == null) {
+      throw const FormatException('Missing or invalid "primary" object.');
+    }
+
+    final primary = RecognitionCandidate.fromMap(primaryMap);
     final alternatives = <RecognitionCandidate>[
       for (final item in (json['alternatives'] as List? ?? const []))
-        RecognitionCandidate.fromMap(Map<String, dynamic>.from(item as Map)),
+        if (_asStringMap(item) case final map?) RecognitionCandidate.fromMap(map),
     ];
     return RecognitionResult(
       primary: primary,
@@ -35,5 +38,15 @@ class RecognitionResult {
 
   Plant toPlant() {
     return primary.toPlant(imagePath: imagePath);
+  }
+
+  static Map<String, dynamic>? _asStringMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return null;
   }
 }
