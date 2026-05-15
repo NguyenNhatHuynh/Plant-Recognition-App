@@ -1,0 +1,21 @@
+{
+    "contents":  [
+                     {
+                         "parts":  [
+                                       {
+                                            "text": "Bạn là chuyên gia nhận diện thực vật.\nPhân tích ảnh cây và trả về CHỈ JSON hợp lệ theo đúng cấu trúc sau:\n{\n  \"primary\": {\n    \"common_name\": \"Tên phổ thông bằng tiếng Việt\",\n    \"scientific_name\": \"Tên khoa học\",\n    \"family\": \"Họ thực vật\",\n    \"description\": \"Mô tả sinh học ngắn gọn, chính xác\",\n    \"habitat\": \"Môi trường sống điển hình\",\n    \"uses\": [\"Ứng dụng 1\", \"Ứng dụng 2\"],\n    \"confidence\": 0.0\n  },\n  \"alternatives\": [\n    {\n      \"common_name\": \"Tên phổ thông\",\n      \"scientific_name\": \"Tên khoa học\",\n      \"family\": \"Họ thực vật\",\n      \"description\": \"Mô tả ngắn\",\n      \"habitat\": \"Môi trường sống\",\n      \"uses\": [\"Ứng dụng\"],\n      \"confidence\": 0.0\n    }\n  ],\n  \"analysis_note\": \"Nhận xét ngắn về mức độ chắc chắn hoặc dấu hiệu nhận diện\"\n}\n\nQuy tắc:\n- Trả về tiếng Việt cho common_name, description, habitat, uses, analysis_note.\n- scientific_name phải là tên Latin chuẩn nếu biết.\n- confidence nằm trong khoảng 0.0 đến 1.0.\n- Nếu không chắc chắn, vẫn chọn loài gần nhất và giảm confidence.\n- Không được trả markdown, không được thêm văn bản ngoài JSON."                                       },
+                                       {
+                                           "inline_data":  {
+                                                               "data":  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAAdVJREFUOBF9Uz1PG0EQfXt3PoNEYgrCh4AiSEnhICQLI0qoqHGN6PIDEE0qmqSNlCapwg9ImTpFAjYIR5DQuECyEFKk2HJhLEJxyN69zcyd116fE29xuzu7772Zt3NC08CIYZ8KMXzRGw71IwxOgpKx/xKEBHZI8aKh8PM2BO+n0sD20xQ8OxMuITlUGEfKNanXjgPtfQ104eRB1+5VdBB2z3kj+NNPGpESK5frCvvVDjK0eU7Kr1d8ZNKid24wjlnwbNL+boEXU8DBcgzuhHFZNqaXgTGHwXukPEnK8wR+l/PxyLeLtuFkMpdgwKXfEq+uZQSeJXvfr/qQpFppKqRdAUnF5p448GltxkAJbMaZAjjtD3kfbVq//NHG1pVEvtKJSmSw7VqvBMNYrks8m3ThUmCzGGB63EHGd3GwJLAy7YFF+vrdEgzYmPhAub74EuBOuGgqhaNsiI2lCXRUiJQ7kDQGdvx8TDJGnXKY9dFsS+qkU3z6+BmtP0EEph4wevEcm5j4djvl2+UvjYU3Gt5bPbdzqGuNVnQxtDppyAOmZQ1+God+hNJ5FcWLG0hKf3HmMXYL60h5bs+LfxLEucVEtmEcpy6OiM2dkQQGYEhE8tekC38BADIeNqhZl4wAAAAASUVORK5CYII=",
+                                                               "mime_type":  "image/png"
+                                                           }
+                                       }
+                                   ]
+                     }
+                 ],
+    "generationConfig":  {
+                             "max_output_tokens":  3000,
+                             "response_mime_type":  "application/json",
+                             "temperature":  0.2
+                         }
+}
