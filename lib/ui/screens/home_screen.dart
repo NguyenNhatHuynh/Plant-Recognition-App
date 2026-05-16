@@ -23,7 +23,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   static const _primaryGreen = Color(0xFF185B43);
-  static const _pageBackground = Color(0xFFF7F8F4);
+  static const _lightGreen = Color(0xFFBFEFCA);
+  static const _pageBackground = Color(0xFFF9FAF7);
 
   int _selectedIndex = 0;
   late final AnimationController _controller;
@@ -35,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 380),
     );
     _animation = CurvedAnimation(
       parent: _controller,
@@ -102,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 250),
+        transitionDuration: const Duration(milliseconds: 220),
       ),
     );
   }
@@ -117,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
             animation: _animation,
             builder: (context, child) {
               return Transform.translate(
-                offset: Offset(0, 18 * (1 - _animation.value)),
+                offset: Offset(0, 14 * (1 - _animation.value)),
                 child: Opacity(
                   opacity: _animation.value,
                   child: SingleChildScrollView(
@@ -125,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _HomeTopBar(
+                        _HomeHeader(
                           onOpenLibrary: () {
                             Navigator.push(
                               context,
@@ -134,31 +135,6 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             );
                           },
-                          onSignOut: _signOut,
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Chào người yêu cây!',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: const Color(0xFF4D5B52),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Bạn muốn tìm hiểu cây gì\nhôm nay?',
-                          style:
-                              Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: _primaryGreen,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.15,
-                                  ),
-                        ),
-                        const SizedBox(height: 20),
-                        _HeroScanCard(
-                          onScanNow: _openCamera,
-                          onUpload: _openCamera,
                           onOpenHistory: () {
                             Navigator.push(
                               context,
@@ -167,43 +143,37 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             );
                           },
+                          onSignOut: _signOut,
                         ),
-                        const SizedBox(height: 22),
-                        FutureBuilder<List<Plant>>(
-                          key: ValueKey('home-favorites-$revision'),
-                          future: dbService.getFavoritePlants(),
-                          builder: (context, snapshot) {
-                            final favorites = snapshot.data ?? const <Plant>[];
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: _SummaryTile(
-                                    icon: Icons.favorite_rounded,
-                                    label: 'Đã lưu',
-                                    value: favorites.length.toString(),
-                                    tone: const Color(0xFFFFF2F0),
-                                    iconColor: const Color(0xFFBE3F39),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Chào người yêu cây!',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: const Color(0xFF4D5A53),
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _SummaryTile(
-                                    icon: Icons.menu_book_rounded,
-                                    label: 'Khám phá',
-                                    value: 'Khám phá',
-                                    tone: const Color(0xFFEFF8F2),
-                                    iconColor: _primaryGreen,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const LibraryScreen(),
-                                        ),
-                                      );
-                                    },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Bạn muốn tìm hiểu cây gì\nhôm nay?',
+                          style:
+                              Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: _primaryGreen,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.17,
                                   ),
-                                ),
-                              ],
+                        ),
+                        const SizedBox(height: 18),
+                        _HomeHeroCard(
+                          onScanNow: _openCamera,
+                          onUpload: _openCamera,
+                          onOpenHistory: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HistoryScreen(),
+                              ),
                             );
                           },
                         ),
@@ -220,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen>
                             );
                           },
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         FutureBuilder<List<RecognitionRecord>>(
                           key: ValueKey('home-history-$revision'),
                           future: dbService.getHistory(),
@@ -238,111 +208,40 @@ class _HomeScreenState extends State<HomeScreen>
                             final records =
                                 snapshot.data ?? const <RecognitionRecord>[];
                             if (records.isEmpty) {
-                              return _EmptyPanel(
-                                title: 'Chưa có lượt quét nào',
-                                description:
-                                    'Hãy chụp hoặc tải ảnh lên để bắt đầu nhận diện cây ngay.',
-                                actionLabel: 'Nhận diện ngay',
-                                onAction: _openCamera,
-                              );
+                              return _EmptyRecentState(onAction: _openCamera);
                             }
 
-                            return LayoutBuilder(
-                              builder: (context, constraints) {
-                                final cardWidth =
-                                    ((constraints.maxWidth - 14) / 2).clamp(
-                                  146.0,
-                                  172.0,
-                                );
-                                final cardHeight = cardWidth + 68;
+                            return SizedBox(
+                              height: 230,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: records.length > 6 ? 6 : records.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 14),
+                                itemBuilder: (context, index) {
+                                  final record = records[index];
+                                  final plant = record.plant.copyWith(
+                                    imagePath: record.imagePath,
+                                  );
 
-                                return SizedBox(
-                                  height: cardHeight,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount:
-                                        records.length > 5 ? 5 : records.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(width: 14),
-                                    itemBuilder: (context, index) {
-                                      final record = records[index];
-                                      final plant = record.plant.copyWith(
-                                        imagePath: record.imagePath,
-                                      );
-
-                                      return _RecentRecognitionCard(
-                                        width: cardWidth,
-                                        plant: plant,
-                                        confidence: record.confidence,
-                                        isFavorite: plant.isFavorite,
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  PlantDetailScreen(plant: plant),
-                                            ),
-                                          );
-                                        },
+                                  return _RecentPlantCard(
+                                    plant: plant,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              PlantDetailScreen(plant: plant),
+                                        ),
                                       );
                                     },
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 28),
-                        _SectionHeader(
-                          title: 'Đi nhanh',
-                          actionLabel: 'Xem thư viện',
-                          onAction: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LibraryScreen(),
+                                  );
+                                },
                               ),
                             );
                           },
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _ShortcutTile(
-                                icon: Icons.photo_library_outlined,
-                                title: 'Thư viện cây',
-                                subtitle: 'Xem danh sách cây đã lưu',
-                                tone: const Color(0xFFF0F8F2),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const LibraryScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _ShortcutTile(
-                                icon: Icons.favorite_border_rounded,
-                                title: 'Cây yêu thích',
-                                subtitle: 'Mở bộ sưu tập riêng của bạn',
-                                tone: const Color(0xFFFFF8F2),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const FavoritesScreen(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 92),
                       ],
                     ),
                   ),
@@ -368,40 +267,48 @@ class _HomeScreenState extends State<HomeScreen>
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Color(0x12000000),
-              blurRadius: 24,
-              offset: Offset(0, -6),
+              color: Color(0x11000000),
+              blurRadius: 20,
+              offset: Offset(0, -4),
             ),
           ],
         ),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onTabTapped,
-          selectedItemColor: _primaryGreen,
-          unselectedItemColor: const Color(0xFF56635B),
+          type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+          selectedItemColor: _primaryGreen,
+          unselectedItemColor: const Color(0xFF4F5A53),
+          selectedLabelStyle: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w500,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w400,
+          ),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
+              activeIcon: _ActiveNavIcon(icon: Icons.home_rounded),
               label: 'Trang chủ',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.menu_book_outlined),
-              activeIcon: Icon(Icons.menu_book_rounded),
+              activeIcon: _ActiveNavIcon(icon: Icons.menu_book_rounded),
               label: 'Thư viện',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.history_toggle_off_rounded),
-              activeIcon: Icon(Icons.history_rounded),
+              icon: Icon(Icons.history_rounded),
+              activeIcon: _ActiveNavIcon(icon: Icons.history_rounded),
               label: 'Lịch sử',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.favorite_border_rounded),
-              activeIcon: Icon(Icons.favorite_rounded),
+              activeIcon: _ActiveNavIcon(icon: Icons.favorite_rounded),
               label: 'Yêu thích',
             ),
           ],
@@ -411,12 +318,14 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-class _HomeTopBar extends StatelessWidget {
+class _HomeHeader extends StatelessWidget {
   final VoidCallback onOpenLibrary;
+  final VoidCallback onOpenHistory;
   final VoidCallback onSignOut;
 
-  const _HomeTopBar({
+  const _HomeHeader({
     required this.onOpenLibrary,
+    required this.onOpenHistory,
     required this.onSignOut,
   });
 
@@ -432,35 +341,65 @@ class _HomeTopBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(
-            Icons.spa_outlined,
+            Icons.spa_rounded,
+            size: 17,
             color: Colors.white,
-            size: 18,
           ),
         ),
         const Spacer(),
-        IconButton(
-          onPressed: onOpenLibrary,
-          icon: const Icon(Icons.search_rounded),
-          color: const Color(0xFF214C3C),
-          tooltip: 'Mở thư viện',
-        ),
-        IconButton(
-          onPressed: onSignOut,
-          icon: const Icon(Icons.logout_rounded),
-          color: const Color(0xFF214C3C),
-          tooltip: 'Đăng xuất',
+        PopupMenuButton<_HeaderAction>(
+          tooltip: 'Mở menu',
+          color: Colors.white,
+          elevation: 10,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          onSelected: (value) {
+            switch (value) {
+              case _HeaderAction.library:
+                onOpenLibrary();
+              case _HeaderAction.history:
+                onOpenHistory();
+              case _HeaderAction.signOut:
+                onSignOut();
+            }
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(
+              value: _HeaderAction.library,
+              child: Text('Thư viện'),
+            ),
+            PopupMenuItem(
+              value: _HeaderAction.history,
+              child: Text('Lịch sử'),
+            ),
+            PopupMenuItem(
+              value: _HeaderAction.signOut,
+              child: Text('Đăng xuất'),
+            ),
+          ],
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Icon(
+              Icons.menu_rounded,
+              color: Color(0xFF185B43),
+              size: 26,
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-class _HeroScanCard extends StatelessWidget {
+enum _HeaderAction { library, history, signOut }
+
+class _HomeHeroCard extends StatelessWidget {
   final VoidCallback onScanNow;
   final VoidCallback onUpload;
   final VoidCallback onOpenHistory;
 
-  const _HeroScanCard({
+  const _HomeHeroCard({
     required this.onScanNow,
     required this.onUpload,
     required this.onOpenHistory,
@@ -471,19 +410,24 @@ class _HeroScanCard extends StatelessWidget {
     final isCompact = MediaQuery.sizeOf(context).width < 390;
 
     return Container(
-      padding: EdgeInsets.all(isCompact ? 18 : 22),
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 20 : 24,
+        isCompact ? 22 : 28,
+        isCompact ? 20 : 24,
+        isCompact ? 20 : 22,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [Color(0xFF255C43), Color(0xFF1C4E3A)],
+          colors: [Color(0xFF2E6B4A), Color(0xFF23563E)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A1C4E3A),
-            blurRadius: 24,
-            offset: Offset(0, 14),
+            color: Color(0x18000000),
+            blurRadius: 26,
+            offset: Offset(0, 10),
           ),
         ],
       ),
@@ -491,78 +435,64 @@ class _HeroScanCard extends StatelessWidget {
         children: [
           Positioned.fill(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: 0.08),
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const _LeafPattern(),
-              ),
+              borderRadius: BorderRadius.circular(24),
+              child: const _HeroLeafBackdrop(),
             ),
           ),
           Column(
             children: [
-              SizedBox(height: isCompact ? 24 : 36),
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 14 : 18,
-                  vertical: isCompact ? 14 : 18,
-                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: InkWell(
                   onTap: onScanNow,
                   borderRadius: BorderRadius.circular(18),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.camera_alt_rounded,
-                        color: Color(0xFF185B43),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Nhận diện ngay',
-                        style:
-                            Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: const Color(0xFF185B43),
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: isCompact ? 24 : null,
-                                ),
-                      ),
-                    ],
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: isCompact ? 15 : 18,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.camera_alt_rounded,
+                          color: Color(0xFF185B43),
+                          size: 21,
+                        ),
+                        const SizedBox(width: 9),
+                        Text(
+                          'Nhận diện ngay',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: const Color(0xFF185B43),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              SizedBox(height: isCompact ? 12 : 16),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: _HeroActionButton(
+                    child: _HeroSmallButton(
                       icon: Icons.image_outlined,
                       label: 'Tải ảnh lên',
                       onTap: onUpload,
-                      compact: isCompact,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _HeroActionButton(
+                    child: _HeroSmallButton(
                       icon: Icons.history_rounded,
-                      label: 'Xem lịch sử',
+                      label: 'Lịch sử',
                       onTap: onOpenHistory,
-                      compact: isCompact,
                     ),
                   ),
                 ],
@@ -575,29 +505,27 @@ class _HeroScanCard extends StatelessWidget {
   }
 }
 
-class _HeroActionButton extends StatelessWidget {
+class _HeroSmallButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final bool compact;
 
-  const _HeroActionButton({
+  const _HeroSmallButton({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.14),
+      color: Colors.white.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: compact ? 13 : 16),
+          padding: const EdgeInsets.symmetric(vertical: 15),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
@@ -607,8 +535,8 @@ class _HeroActionButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: compact ? 19 : 22),
-              SizedBox(width: compact ? 6 : 8),
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 7),
               Flexible(
                 child: Text(
                   label,
@@ -616,8 +544,7 @@ class _HeroActionButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        fontSize: compact ? 14 : null,
+                        fontWeight: FontWeight.w400,
                       ),
                 ),
               ),
@@ -648,18 +575,23 @@ class _SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFF1F2E25),
+                  color: const Color(0xFF1B2320),
                   fontWeight: FontWeight.w500,
                 ),
           ),
         ),
         TextButton(
           onPressed: onAction,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 0),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           child: Text(
             actionLabel,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: const Color(0xFF185B43),
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
           ),
         ),
@@ -668,231 +600,79 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _SummaryTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color tone;
-  final Color iconColor;
-  final VoidCallback? onTap;
-
-  const _SummaryTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.tone,
-    required this.iconColor,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: tone,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF536259),
-                          ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      value,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: const Color(0xFF1F2E25),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RecentRecognitionCard extends StatelessWidget {
-  final double width;
+class _RecentPlantCard extends StatelessWidget {
   final Plant plant;
-  final double confidence;
-  final bool isFavorite;
   final VoidCallback onTap;
 
-  const _RecentRecognitionCard({
-    this.width = 168,
+  const _RecentPlantCard({
     required this.plant,
-    required this.confidence,
-    required this.isFavorite,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final imageHeight = width * 0.95;
-
     return SizedBox(
-      width: width,
+      width: 162,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    Hero(
-                      tag: 'plant-${plant.id}',
-                      child: PlantImage(
-                        plant: plant,
-                        height: imageHeight,
-                        width: width,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                    ),
-                    Positioned(
-                      right: 10,
-                      top: 10,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: isFavorite
-                              ? const Color(0xFFD12C2C)
-                              : const Color(0xFF7A867F),
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  plant.commonName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF202D25),
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  plant.scientificName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF707B74),
-                        fontStyle: FontStyle.italic,
-                        fontSize: 13,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Độ tin cậy ${(confidence.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF7C847F),
-                        fontSize: 11.5,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShortcutTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color tone;
-  final VoidCallback onTap;
-
-  const _ShortcutTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.tone,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: tone,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF185B43),
-                ),
+              Stack(
+                children: [
+                  Hero(
+                    tag: 'plant-${plant.id}',
+                    child: PlantImage(
+                      plant: plant,
+                      height: 160,
+                      width: 162,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        plant.isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: plant.isFavorite
+                            ? const Color(0xFFD12727)
+                            : const Color(0xFF8B928E),
+                        size: 19,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: const Color(0xFF203026),
-                      fontWeight: FontWeight.w700,
+                plant.commonName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: const Color(0xFF1E2420),
+                      fontWeight: FontWeight.w400,
                     ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               Text(
-                subtitle,
+                plant.scientificName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF65726B),
-                      height: 1.45,
+                      color: const Color(0xFF6F7872),
+                      fontStyle: FontStyle.italic,
                     ),
               ),
             ],
@@ -903,18 +683,10 @@ class _ShortcutTile extends StatelessWidget {
   }
 }
 
-class _EmptyPanel extends StatelessWidget {
-  final String title;
-  final String description;
-  final String actionLabel;
+class _EmptyRecentState extends StatelessWidget {
   final VoidCallback onAction;
 
-  const _EmptyPanel({
-    required this.title,
-    required this.description,
-    required this.actionLabel,
-    required this.onAction,
-  });
+  const _EmptyRecentState({required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -923,8 +695,8 @@ class _EmptyPanel extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE5EBE6)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE4E9E4)),
       ),
       child: Column(
         children: [
@@ -932,8 +704,8 @@ class _EmptyPanel extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5EC),
-              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFFEEF8F0),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
               Icons.eco_outlined,
@@ -942,21 +714,18 @@ class _EmptyPanel extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            title,
+            'Chưa có lượt quét nào',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFF203026),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF65726B),
-                  height: 1.5,
-                ),
+            'Chụp hoặc tải ảnh cây lên để bắt đầu nhận diện.',
             textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF66726B),
+                ),
           ),
           const SizedBox(height: 18),
           ElevatedButton(
@@ -964,15 +733,8 @@ class _EmptyPanel extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF185B43),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 14,
-              ),
             ),
-            child: Text(actionLabel),
+            child: const Text('Nhận diện ngay'),
           ),
         ],
       ),
@@ -980,42 +742,54 @@ class _EmptyPanel extends StatelessWidget {
   }
 }
 
-class _LeafPattern extends StatelessWidget {
-  const _LeafPattern();
+class _HeroLeafBackdrop extends StatelessWidget {
+  const _HeroLeafBackdrop();
 
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.expand,
       children: const [
-        _LeafBlur(
+        _LeafShape(
           alignment: Alignment.topLeft,
-          rotation: -0.35,
-          size: 150,
+          width: 230,
+          height: 120,
+          angle: -0.42,
         ),
-        _LeafBlur(
+        _LeafShape(
           alignment: Alignment.centerRight,
-          rotation: 0.2,
-          size: 170,
+          width: 230,
+          height: 120,
+          angle: 0.28,
         ),
-        _LeafBlur(
+        _LeafShape(
           alignment: Alignment.bottomLeft,
-          rotation: 0.65,
-          size: 130,
+          width: 180,
+          height: 100,
+          angle: 0.58,
+        ),
+        _LeafShape(
+          alignment: Alignment.center,
+          width: 170,
+          height: 90,
+          angle: -0.18,
         ),
       ],
     );
   }
 }
 
-class _LeafBlur extends StatelessWidget {
+class _LeafShape extends StatelessWidget {
   final Alignment alignment;
-  final double rotation;
-  final double size;
+  final double width;
+  final double height;
+  final double angle;
 
-  const _LeafBlur({
+  const _LeafShape({
     required this.alignment,
-    required this.rotation,
-    required this.size,
+    required this.width,
+    required this.height,
+    required this.angle,
   });
 
   @override
@@ -1023,22 +797,44 @@ class _LeafBlur extends StatelessWidget {
     return Align(
       alignment: alignment,
       child: Transform.rotate(
-        angle: rotation,
+        angle: angle,
         child: Container(
-          width: size,
-          height: size * 0.56,
+          width: width,
+          height: height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(size),
+            borderRadius: BorderRadius.circular(999),
             gradient: LinearGradient(
               colors: [
-                Colors.white.withValues(alpha: 0.12),
-                Colors.white.withValues(alpha: 0.02),
+                Colors.white.withValues(alpha: 0.10),
+                Colors.black.withValues(alpha: 0.04),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ActiveNavIcon extends StatelessWidget {
+  final IconData icon;
+
+  const _ActiveNavIcon({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+      decoration: BoxDecoration(
+        color: _HomeScreenState._lightGreen,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Icon(
+        icon,
+        color: _HomeScreenState._primaryGreen,
+        size: 22,
       ),
     );
   }
