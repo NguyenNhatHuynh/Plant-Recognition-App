@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/plant.dart';
@@ -7,11 +8,11 @@ import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
 import '../widgets/plant_image.dart';
-import 'camera_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
 import 'library_screen.dart';
 import 'plant_detail_screen.dart';
+import 'recognition_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen>
   late final AnimationController _controller;
   late final Animation<double> _animation;
   late final List<Widget> _screens;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -92,11 +94,20 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _openCamera() {
-    Navigator.push(
-      context,
+  Future<void> _pickAndRecognize(ImageSource source) async {
+    final image = await _picker.pickImage(
+      source: source,
+      imageQuality: 90,
+      maxWidth: 1600,
+    );
+
+    if (image == null || !mounted) {
+      return;
+    }
+
+    await Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const CameraScreen(),
+        pageBuilder: (_, __, ___) => RecognitionScreen(imageFile: image),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
             opacity: animation,
@@ -166,8 +177,8 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         const SizedBox(height: 18),
                         _HomeHeroCard(
-                          onScanNow: _openCamera,
-                          onUpload: _openCamera,
+                          onScanNow: () => _pickAndRecognize(ImageSource.camera),
+                          onUpload: () => _pickAndRecognize(ImageSource.gallery),
                           onOpenHistory: () {
                             Navigator.push(
                               context,
@@ -208,7 +219,10 @@ class _HomeScreenState extends State<HomeScreen>
                             final records =
                                 snapshot.data ?? const <RecognitionRecord>[];
                             if (records.isEmpty) {
-                              return _EmptyRecentState(onAction: _openCamera);
+                              return _EmptyRecentState(
+                                onAction: () =>
+                                    _pickAndRecognize(ImageSource.camera),
+                              );
                             }
 
                             return SizedBox(
@@ -465,7 +479,7 @@ class _HomeHeroCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 9),
                         Text(
-                          'Nhận diện ngay',
+                          'Chụp cây để nhận diện',
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: const Color(0xFF185B43),
@@ -734,7 +748,7 @@ class _EmptyRecentState extends StatelessWidget {
               backgroundColor: const Color(0xFF185B43),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Nhận diện ngay'),
+            child: const Text('Chụp cây ngay'),
           ),
         ],
       ),
