@@ -4,11 +4,45 @@ import 'package:provider/provider.dart';
 import '../../models/recognition_record.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/favorite_action_button.dart';
 import '../widgets/plant_image.dart';
 import 'plant_detail_screen.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  final Set<int> _pendingFavoriteIds = <int>{};
+
+  Future<void> _toggleFavorite(RecognitionRecord record) async {
+    final plant = record.plant;
+    final plantId = plant.id;
+    if (plantId == null || _pendingFavoriteIds.contains(plantId)) {
+      return;
+    }
+
+    setState(() {
+      _pendingFavoriteIds.add(plantId);
+    });
+
+    try {
+      final dbService = context.read<DatabaseService>();
+      final appState = context.read<AppState>();
+      final nextValue = !plant.isFavorite;
+      await dbService.toggleFavorite(plantId, nextValue);
+      appState.markChanged();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pendingFavoriteIds.remove(plantId);
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +51,7 @@ class HistoryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lịch sử'),
+        title: const Text('Lá»‹ch sá»­'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -34,13 +68,18 @@ class HistoryScreen extends StatelessWidget {
               final records = snapshot.data ?? const <RecognitionRecord>[];
               if (records.isEmpty) {
                 return const Center(
-                  child: Text('Chưa có lịch sử nhận diện.'),
+                  child: Text('ChÆ°a cÃ³ lá»‹ch sá»­ nháº­n diá»‡n.'),
                 );
               }
               return ListView.builder(
                 itemCount: records.length,
                 itemBuilder: (context, index) {
                   final record = records[index];
+                  final plant = record.plant;
+                  final plantId = plant.id;
+                  final isLoading =
+                      plantId != null && _pendingFavoriteIds.contains(plantId);
+
                   return Card(
                     elevation: 0,
                     child: ListTile(
@@ -49,7 +88,7 @@ class HistoryScreen extends StatelessWidget {
                         width: 72,
                         height: 72,
                         child: PlantImage(
-                          plant: record.plant.copyWith(
+                          plant: plant.copyWith(
                             imagePath: record.imagePath,
                           ),
                           height: 72,
@@ -57,22 +96,33 @@ class HistoryScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      title: Text(record.plant.commonName),
+                      title: Text(plant.commonName),
                       subtitle: Text(
-                        '${record.plant.scientificName}\n${_formatDate(record.capturedAt)}',
+                        '${plant.scientificName}\n${_formatDate(record.capturedAt)}',
                       ),
                       isThreeLine: true,
-                      trailing: Text(
-                        '${(record.confidence * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${(record.confidence * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          if (plantId != null)
+                            FavoriteActionButton(
+                              isFavorite: plant.isFavorite,
+                              isLoading: isLoading,
+                              onTap: () => _toggleFavorite(record),
+                              size: 20,
+                              padding: const EdgeInsets.all(4),
+                            ),
+                        ],
                       ),
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PlantDetailScreen(plant: record.plant),
-                          ),
+                          PlantDetailScreen.route(plant),
                         );
                       },
                     ),

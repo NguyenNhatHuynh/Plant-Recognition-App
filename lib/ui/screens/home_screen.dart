@@ -7,6 +7,7 @@ import '../../models/recognition_record.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/favorite_action_button.dart';
 import '../widgets/plant_image.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
@@ -32,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen>
   late final Animation<double> _animation;
   late final List<Widget> _screens;
   final ImagePicker _picker = ImagePicker();
+  final Set<int> _pendingFavoriteIds = <int>{};
+  final Map<int, bool> _favoriteOverrides = <int, bool>{};
 
   @override
   void initState() {
@@ -119,12 +122,43 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Future<void> _toggleFavorite(Plant plant) async {
+    final plantId = plant.id;
+    if (plantId == null || _pendingFavoriteIds.contains(plantId)) {
+      return;
+    }
+
+    final nextValue = !plant.isFavorite;
+
+    setState(() {
+      _pendingFavoriteIds.add(plantId);
+      _favoriteOverrides[plantId] = nextValue;
+    });
+
+    try {
+      final dbService = context.read<DatabaseService>();
+      final appState = context.read<AppState>();
+      await dbService.toggleFavorite(plantId, nextValue);
+      appState.markChanged();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _favoriteOverrides[plantId] = !nextValue;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pendingFavoriteIds.remove(plantId);
+        });
+      }
+    }
+  }
+
   Widget _buildHomeTab() {
     return SafeArea(
       child: Consumer2<AppState, DatabaseService>(
         builder: (context, appState, dbService, _) {
-          final revision = appState.revision;
-
           return AnimatedBuilder(
             animation: _animation,
             builder: (context, child) {
@@ -203,11 +237,11 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         const SizedBox(height: 16),
                         FutureBuilder<List<RecognitionRecord>>(
-                          key: ValueKey('home-history-$revision'),
                           future: dbService.getHistory(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
+                                    ConnectionState.waiting &&
+                                !snapshot.hasData) {
                               return const SizedBox(
                                 height: 220,
                                 child: Center(
@@ -235,19 +269,27 @@ class _HomeScreenState extends State<HomeScreen>
                                     const SizedBox(width: 14),
                                 itemBuilder: (context, index) {
                                   final record = records[index];
-                                  final plant = record.plant.copyWith(
+                                  final basePlant = record.plant.copyWith(
                                     imagePath: record.imagePath,
                                   );
+                                  final override = basePlant.id == null
+                                      ? null
+                                      : _favoriteOverrides[basePlant.id];
+                                  final plant = override == null
+                                      ? basePlant
+                                      : basePlant.copyWith(
+                                          isFavorite: override,
+                                        );
 
                                   return _RecentPlantCard(
                                     plant: plant,
+                                    isFavoriteLoading: plant.id != null &&
+                                        _pendingFavoriteIds.contains(plant.id),
+                                    onFavoriteTap: () => _toggleFavorite(plant),
                                     onTap: () {
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              PlantDetailScreen(plant: plant),
-                                        ),
+                                        PlantDetailScreen.route(plant),
                                       );
                                     },
                                   );
@@ -570,10 +612,14 @@ class _SectionHeader extends StatelessWidget {
 class _RecentPlantCard extends StatelessWidget {
   final Plant plant;
   final VoidCallback onTap;
+  final VoidCallback onFavoriteTap;
+  final bool isFavoriteLoading;
 
   const _RecentPlantCard({
     required this.plant,
     required this.onTap,
+    required this.onFavoriteTap,
+    required this.isFavoriteLoading,
   });
 
   @override
@@ -602,22 +648,11 @@ class _RecentPlantCard extends StatelessWidget {
                   Positioned(
                     right: 8,
                     top: 8,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        plant.isFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: plant.isFavorite
-                            ? const Color(0xFFD12727)
-                            : const Color(0xFF8B928E),
-                        size: 19,
-                      ),
+                    child: FavoriteActionButton(
+                      isFavorite: plant.isFavorite,
+                      isLoading: isFavoriteLoading,
+                      onTap: onFavoriteTap,
+                      size: 19,
                     ),
                   ),
                 ],

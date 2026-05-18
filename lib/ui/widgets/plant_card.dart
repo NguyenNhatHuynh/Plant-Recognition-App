@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../models/plant.dart';
+import 'favorite_action_button.dart';
 import 'plant_image.dart';
 
 class PlantCard extends StatelessWidget {
   final Plant plant;
   final VoidCallback onTap;
   final bool compact;
+  final VoidCallback? onFavoriteTap;
+  final bool isFavoriteLoading;
 
   const PlantCard({
     super.key,
     required this.plant,
     required this.onTap,
     this.compact = false,
+    this.onFavoriteTap,
+    this.isFavoriteLoading = false,
   });
 
   @override
@@ -31,12 +36,26 @@ class PlantCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PlantImage(
-                plant: plant,
-                height: compact ? 120 : 140,
-                width: compact ? 150 : double.infinity,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+              Stack(
+                children: [
+                  PlantImage(
+                    plant: plant,
+                    height: compact ? 120 : 140,
+                    width: compact ? 150 : double.infinity,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  if (onFavoriteTap != null)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: FavoriteActionButton(
+                        isFavorite: plant.isFavorite,
+                        isLoading: isFavoriteLoading,
+                        onTap: onFavoriteTap,
+                      ),
+                    ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.all(12),

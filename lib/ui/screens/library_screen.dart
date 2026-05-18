@@ -18,6 +18,7 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final Set<int> _pendingFavoriteIds = <int>{};
   Timer? _debounce;
   String _query = '';
 
@@ -40,6 +41,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
     });
   }
 
+  Future<void> _toggleFavorite(Plant plant) async {
+    final plantId = plant.id;
+    if (plantId == null || _pendingFavoriteIds.contains(plantId)) {
+      return;
+    }
+
+    setState(() {
+      _pendingFavoriteIds.add(plantId);
+    });
+
+    try {
+      final dbService = context.read<DatabaseService>();
+      final appState = context.read<AppState>();
+      final nextValue = !plant.isFavorite;
+      await dbService.toggleFavorite(plantId, nextValue);
+      appState.markChanged();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pendingFavoriteIds.remove(plantId);
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final revision = context.watch<AppState>().revision;
@@ -47,7 +73,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thư viện'),
+        title: const Text('ThÆ° viá»‡n'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -61,7 +87,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'Tìm theo tên, họ, mô tả...',
+                  hintText: 'TÃ¬m theo tÃªn, há», mÃ´ táº£...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: const Color(0xFFF5F7F5),
@@ -83,7 +109,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     final plants = snapshot.data ?? const <Plant>[];
                     if (plants.isEmpty) {
                       return const Center(
-                        child: Text('Không tìm thấy loài phù hợp.'),
+                        child: Text('KhÃ´ng tÃ¬m tháº¥y loÃ i phÃ¹ há»£p.'),
                       );
                     }
                     return ListView.builder(
@@ -92,12 +118,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         final plant = plants[index];
                         return PlantCard(
                           plant: plant,
+                          isFavoriteLoading: plant.id != null &&
+                              _pendingFavoriteIds.contains(plant.id),
+                          onFavoriteTap: () => _toggleFavorite(plant),
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) => PlantDetailScreen(plant: plant),
-                              ),
+                              PlantDetailScreen.route(plant),
                             );
                           },
                         );

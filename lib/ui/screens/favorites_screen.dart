@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/plant.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/favorite_action_button.dart';
 import '../widgets/plant_image.dart';
 import 'plant_detail_screen.dart';
 
@@ -19,6 +20,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   final TextEditingController _searchController = TextEditingController();
   final Set<int> _pendingFavoriteIds = <int>{};
+  final Set<int> _hiddenFavoriteIds = <int>{};
 
   @override
   void dispose() {
@@ -36,35 +38,25 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       _pendingFavoriteIds.add(plantId);
     });
 
+    final dbService = context.read<DatabaseService>();
+    final appState = context.read<AppState>();
+
     try {
-      final dbService = context.read<DatabaseService>();
-      final appState = context.read<AppState>();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      if (mounted) {
+        setState(() {
+          _hiddenFavoriteIds.add(plantId);
+        });
+      }
 
       await dbService.toggleFavorite(plantId, false);
       appState.markChanged();
-
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _hiddenFavoriteIds.remove(plantId);
+        });
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Đã xóa "${plant.commonName}" khỏi danh sách yêu thích.',
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
     } finally {
       if (mounted) {
         setState(() {
@@ -88,21 +80,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final revision = context.watch<AppState>().revision;
+    context.watch<AppState>().revision;
     final dbService = context.read<DatabaseService>();
 
     return Scaffold(
       backgroundColor: _pageBackground,
       body: SafeArea(
         child: FutureBuilder<List<Plant>>(
-          key: ValueKey(revision),
           future: dbService.getFavoritePlants(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final favoritePlants = snapshot.data ?? const <Plant>[];
+            final favoritePlants = (snapshot.data ?? const <Plant>[])
+                .where((plant) =>
+                    plant.id == null || !_hiddenFavoriteIds.contains(plant.id))
+                .toList(growable: false);
             final query = _searchController.text.trim();
             final filteredPlants = favoritePlants
                 .where((plant) => _matchesQuery(plant, query))
@@ -111,7 +106,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             return AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               child: _FavoritesContent(
-                key: ValueKey('$revision|$query|${favoritePlants.length}'),
+                key: ValueKey('$query|${favoritePlants.length}'),
                 title: 'Cây yêu thích',
                 subtitle: 'Danh sách các loài cây bạn đã lưu.',
                 searchController: _searchController,
@@ -122,9 +117,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 onOpenPlant: (plant) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => PlantDetailScreen(plant: plant),
-                    ),
+                    PlantDetailScreen.route(plant),
                   );
                 },
                 onToggleFavorite: _removeFromFavorites,
@@ -392,111 +385,105 @@ class _FavoritePlantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      shadowColor: const Color(0x12000000),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: Colors.white,
+    return AnimatedScale(
+      scale: isPending ? 0.92 : 1,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: isPending ? 0 : 1,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          shadowColor: const Color(0x12000000),
+          elevation: 0,
+          child: InkWell(
+            onTap: isPending ? null : onTap,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0F000000),
-                blurRadius: 20,
-                offset: Offset(0, 8),
+            child: Ink(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0F000000),
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Hero(
-                        tag: 'plant-${plant.id}',
-                        child: PlantImage(
-                          plant: plant,
-                          height: double.infinity,
-                          width: double.infinity,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Hero(
+                            tag: 'plant-${plant.id}',
+                            child: PlantImage(
+                              plant: plant,
+                              height: double.infinity,
+                              width: double.infinity,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Material(
-                        color: Colors.white,
-                        shape: const CircleBorder(),
-                        elevation: 1,
-                        child: InkWell(
-                          onTap: isPending ? null : onFavoriteTap,
-                          customBorder: const CircleBorder(),
-                          child: Padding(
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: FavoriteActionButton(
+                            isFavorite: true,
+                            isLoading: isPending,
+                            onTap: onFavoriteTap,
+                            size: 20,
                             padding: const EdgeInsets.all(7),
-                            child: isPending
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.favorite_rounded,
-                                    color: Color(0xFFD72828),
-                                    size: 20,
-                                  ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plant.commonName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: const Color(0xFF263129),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 15,
+                                    height: 1.18,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          plant.scientificName.isEmpty
+                              ? plant.family
+                              : plant.scientificName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: const Color(0xFF6D756F),
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 12.5,
+                                    height: 1.28,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plant.commonName,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: const Color(0xFF263129),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 15,
-                            height: 1.18,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      plant.scientificName.isEmpty
-                          ? plant.family
-                          : plant.scientificName,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF6D756F),
-                            fontStyle: FontStyle.italic,
-                            fontSize: 12.5,
-                            height: 1.28,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

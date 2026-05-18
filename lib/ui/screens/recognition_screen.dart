@@ -345,9 +345,7 @@ Nhận xét: ${widget.result.analysisNote}
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => PlantDetailScreen(plant: _plant),
-                  ),
+                  PlantDetailScreen.route(_plant),
                 );
               },
               child: const Text('Xem thông tin chi tiết'),
