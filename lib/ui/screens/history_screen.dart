@@ -33,7 +33,9 @@ class HistoryScreen extends StatelessWidget {
               }
               final records = snapshot.data ?? const <RecognitionRecord>[];
               if (records.isEmpty) {
-                return const Center(child: Text('Chưa có lịch sử nhận diện.'));
+                return const Center(
+                  child: Text('Chưa có lịch sử nhận diện.'),
+                );
               }
               return ListView.builder(
                 itemCount: records.length,
@@ -68,7 +70,8 @@ class HistoryScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => PlantDetailScreen(plant: record.plant),
+                            builder: (_) =>
+                                PlantDetailScreen(plant: record.plant),
                           ),
                         );
                       },
