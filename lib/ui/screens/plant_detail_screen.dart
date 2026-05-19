@@ -401,12 +401,6 @@ class _PlantSummaryCard extends StatelessWidget {
                 icon: Icons.eco_outlined,
                 label: plant.family.isEmpty ? 'Chưa rõ họ thực vật' : plant.family,
               ),
-              _MetaPill(
-                icon: Icons.offline_bolt_rounded,
-                label: plant.isOfflineAvailable
-                    ? 'Đã lưu ngoại tuyến'
-                    : 'Chưa lưu ngoại tuyến',
-              ),
             ],
           ),
         ],
