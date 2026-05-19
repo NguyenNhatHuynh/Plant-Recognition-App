@@ -10,7 +10,10 @@ import '../models/recognition_result.dart';
 class DatabaseService {
   static Database? _db;
   static const String _databaseName = 'plants.db';
-  static const int _version = 4;
+  static const int _version = 5;
+  static const String syncStatusPending = 'pending';
+  static const String syncStatusSynced = 'synced';
+  static const String syncStatusFailed = 'failed';
 
   static const Map<String, String> _plantColumnDefinitions =
       <String, String>{
@@ -27,6 +30,21 @@ class DatabaseService {
     'feng_shui_meaning': "TEXT NOT NULL DEFAULT ''",
     'origin': "TEXT NOT NULL DEFAULT ''",
     'common_issues': "TEXT NOT NULL DEFAULT ''",
+    'remote_id': "TEXT NOT NULL DEFAULT ''",
+    'user_id': "TEXT NOT NULL DEFAULT ''",
+    'sync_status': "TEXT NOT NULL DEFAULT 'synced'",
+    'updated_at': "TEXT NOT NULL DEFAULT ''",
+    'last_synced_at': "TEXT NOT NULL DEFAULT ''",
+  };
+
+  static const Map<String, String> _recognitionRecordColumnDefinitions =
+      <String, String>{
+    'remote_id': "TEXT NOT NULL DEFAULT ''",
+    'user_id': "TEXT NOT NULL DEFAULT ''",
+    'client_record_key': "TEXT NOT NULL DEFAULT ''",
+    'sync_status': "TEXT NOT NULL DEFAULT 'pending'",
+    'updated_at': "TEXT NOT NULL DEFAULT ''",
+    'last_synced_at': "TEXT NOT NULL DEFAULT ''",
   };
 
   static const List<String> _searchColumns = <String>[
@@ -102,7 +120,12 @@ class DatabaseService {
         common_issues TEXT NOT NULL DEFAULT '',
         image_path TEXT NOT NULL,
         is_favorite INTEGER NOT NULL DEFAULT 0,
-        is_offline_available INTEGER NOT NULL DEFAULT 0
+        is_offline_available INTEGER NOT NULL DEFAULT 0,
+        remote_id TEXT NOT NULL DEFAULT '',
+        user_id TEXT NOT NULL DEFAULT '',
+        sync_status TEXT NOT NULL DEFAULT 'synced',
+        updated_at TEXT NOT NULL DEFAULT '',
+        last_synced_at TEXT NOT NULL DEFAULT ''
       )
     ''');
 
@@ -114,6 +137,12 @@ class DatabaseService {
         confidence REAL NOT NULL,
         captured_at TEXT NOT NULL,
         raw_json TEXT NOT NULL,
+        remote_id TEXT NOT NULL DEFAULT '',
+        user_id TEXT NOT NULL DEFAULT '',
+        client_record_key TEXT NOT NULL DEFAULT '',
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        updated_at TEXT NOT NULL DEFAULT '',
+        last_synced_at TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (plant_id) REFERENCES plants (id) ON DELETE CASCADE
       )
     ''');
@@ -134,6 +163,18 @@ class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_recognition_records_captured_at
       ON recognition_records (captured_at DESC)
     ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_plants_sync_status
+      ON plants (sync_status)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_records_sync_status
+      ON recognition_records (sync_status)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_records_client_record_key
+      ON recognition_records (client_record_key)
+    ''');
   }
 
   Future<void> _runMigrations(
@@ -148,8 +189,16 @@ class DatabaseService {
       await _seedPlants(db);
     }
 
+    if (oldVersion < 5) {
+      await _ensurePlantColumns(db);
+      await _ensureRecognitionRecordColumns(db);
+      await _backfillSyncMetadata(db);
+    }
+
     if (newVersion > oldVersion) {
       await _ensurePlantColumns(db);
+      await _ensureRecognitionRecordColumns(db);
+      await _backfillSyncMetadata(db);
     }
   }
 
@@ -166,6 +215,110 @@ class DatabaseService {
           'ALTER TABLE plants ADD COLUMN ${entry.key} ${entry.value}',
         );
       }
+    }
+  }
+
+  Future<void> _ensureRecognitionRecordColumns(Database db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(recognition_records)');
+    final existingNames = columns
+        .map((item) => item['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+
+    for (final entry in _recognitionRecordColumnDefinitions.entries) {
+      if (!existingNames.contains(entry.key)) {
+        await db.execute(
+          'ALTER TABLE recognition_records ADD COLUMN ${entry.key} ${entry.value}',
+        );
+      }
+    }
+  }
+
+  Future<void> _backfillSyncMetadata(Database db) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    await db.update(
+      'plants',
+      <String, Object?>{
+        'remote_id': '',
+        'user_id': '',
+        'last_synced_at': '',
+      },
+      where:
+          "remote_id IS NULL OR user_id IS NULL OR last_synced_at IS NULL",
+    );
+
+    await db.rawUpdate(
+      '''
+      UPDATE plants
+      SET
+        sync_status = CASE
+          WHEN trim(sync_status) = '' THEN
+            CASE
+              WHEN is_favorite = 1
+                OR EXISTS (
+                  SELECT 1
+                  FROM recognition_records AS records
+                  WHERE records.plant_id = plants.id
+                )
+              THEN ?
+              ELSE ?
+            END
+          ELSE sync_status
+        END,
+        updated_at = CASE
+          WHEN trim(updated_at) = '' THEN ?
+          ELSE updated_at
+        END
+      ''',
+      <Object?>[syncStatusPending, syncStatusSynced, now],
+    );
+
+    final incompleteRecords = await db.query(
+      'recognition_records',
+      columns: <String>[
+        'id',
+        'plant_id',
+        'image_path',
+        'captured_at',
+        'remote_id',
+        'user_id',
+        'client_record_key',
+        'sync_status',
+        'updated_at',
+        'last_synced_at',
+      ],
+      where:
+          "trim(remote_id) = '' OR trim(user_id) = '' OR trim(client_record_key) = '' OR trim(sync_status) = '' OR trim(updated_at) = '' OR trim(last_synced_at) = ''",
+    );
+
+    for (final row in incompleteRecords) {
+      final plantId = (row['plant_id'] as num?)?.toInt() ?? 0;
+      final imagePath = row['image_path'] as String? ?? '';
+      final capturedAt = row['captured_at'] as String? ?? now;
+      await db.update(
+        'recognition_records',
+        <String, Object?>{
+          'remote_id': row['remote_id'] as String? ?? '',
+          'user_id': row['user_id'] as String? ?? '',
+          'client_record_key': (row['client_record_key'] as String?)?.trim().isNotEmpty == true
+              ? row['client_record_key'] as String
+              : _buildClientRecordKey(
+                  plantId: plantId,
+                  imagePath: imagePath,
+                  capturedAt: capturedAt,
+                ),
+          'sync_status': (row['sync_status'] as String?)?.trim().isNotEmpty == true
+              ? row['sync_status'] as String
+              : syncStatusPending,
+          'updated_at': (row['updated_at'] as String?)?.trim().isNotEmpty == true
+              ? row['updated_at'] as String
+              : capturedAt,
+          'last_synced_at': row['last_synced_at'] as String? ?? '',
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[(row['id'] as num?)?.toInt()],
+      );
     }
   }
 
@@ -360,11 +513,24 @@ class DatabaseService {
     ];
 
     for (final plant in seedPlants) {
-      await _upsertPlantWithDatabase(db, plant);
+      await _upsertPlantWithDatabase(
+        db,
+        plant,
+        markPendingSync: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      );
     }
   }
 
-  Future<int> _upsertPlantWithDatabase(Database db, Plant plant) async {
+  Future<int> _upsertPlantWithDatabase(
+    Database db,
+    Plant plant, {
+    bool markPendingSync = true,
+    String? remoteId,
+    String? userId,
+    String? syncedAt,
+    String? updatedAt,
+  }) async {
     final existing = await db.query(
       'plants',
       where: 'scientific_name = ?',
@@ -379,23 +545,42 @@ class DatabaseService {
         existing: existingPlant,
       ).copyWith(
         id: existingPlant.id,
-        isFavorite: existingPlant.isFavorite,
+        isFavorite: markPendingSync ? existingPlant.isFavorite : plant.isFavorite,
         isOfflineAvailable:
             plant.isOfflineAvailable || existingPlant.isOfflineAvailable,
       );
 
+      final row = _buildPlantRow(
+        mergedPlant,
+        markPendingSync: markPendingSync,
+        existingRow: existing.first,
+        remoteId: remoteId,
+        userId: userId,
+        syncedAt: syncedAt,
+        updatedAt: updatedAt,
+      );
+
       await db.update(
         'plants',
-        mergedPlant.toMap(),
+        row,
         where: 'id = ?',
         whereArgs: <Object?>[existingPlant.id],
       );
       return existingPlant.id!;
     }
 
+    final row = _buildPlantRow(
+      plant,
+      markPendingSync: markPendingSync,
+      remoteId: remoteId,
+      userId: userId,
+      syncedAt: syncedAt,
+      updatedAt: updatedAt,
+    );
+
     return db.insert(
       'plants',
-      plant.toMap(),
+      row,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -460,18 +645,29 @@ class DatabaseService {
           isOfflineAvailable: true,
         );
     final plantId = await _upsertPlantWithDatabase(db, plant);
+    final capturedAt = DateTime.now().toUtc().toIso8601String();
 
     await db.insert('recognition_records', <String, Object?>{
       'plant_id': plantId,
       'image_path': imagePath,
       'confidence': result.primary.confidence,
-      'captured_at': DateTime.now().toIso8601String(),
+      'captured_at': capturedAt,
       'raw_json': jsonEncode(<String, Object?>{
         'primary': result.primary.toMap(),
         'alternatives':
             result.alternatives.map((item) => item.toMap()).toList(),
         'analysis_note': result.analysisNote,
       }),
+      'client_record_key': _buildClientRecordKey(
+        plantId: plantId,
+        imagePath: imagePath,
+        capturedAt: capturedAt,
+      ),
+      'sync_status': syncStatusPending,
+      'updated_at': capturedAt,
+      'remote_id': '',
+      'user_id': '',
+      'last_synced_at': '',
     });
 
     return plant.copyWith(id: plantId);
@@ -564,10 +760,285 @@ class DatabaseService {
     final db = await database;
     await db.update(
       'plants',
-      <String, Object?>{'is_favorite': isFavorite ? 1 : 0},
+      <String, Object?>{
+        'is_favorite': isFavorite ? 1 : 0,
+        'sync_status': syncStatusPending,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
       where: 'id = ?',
       whereArgs: <Object?>[plantId],
     );
+  }
+
+  Future<List<Map<String, Object?>>> getPlantsPendingSync() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT *
+      FROM plants
+      WHERE sync_status != ?
+        AND (
+          is_favorite = 1
+          OR EXISTS (
+            SELECT 1
+            FROM recognition_records AS records
+            WHERE records.plant_id = plants.id
+          )
+        )
+      ORDER BY updated_at ASC, id ASC
+      ''',
+      <Object?>[syncStatusSynced],
+    );
+    return rows
+        .map((row) => Map<String, Object?>.from(row))
+        .toList(growable: false);
+  }
+
+  Future<List<Map<String, Object?>>> getRecognitionRecordsPendingSync() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        records.*,
+        plants.remote_id AS plant_remote_id,
+        plants.scientific_name AS plant_scientific_name
+      FROM recognition_records AS records
+      INNER JOIN plants ON plants.id = records.plant_id
+      WHERE records.sync_status != ?
+      ORDER BY records.captured_at ASC, records.id ASC
+      ''',
+      <Object?>[syncStatusSynced],
+    );
+    return rows
+        .map((row) => Map<String, Object?>.from(row))
+        .toList(growable: false);
+  }
+
+  Future<void> markPlantSynced(
+    int plantId, {
+    required String remoteId,
+    required String userId,
+    required String syncedAt,
+  }) async {
+    final db = await database;
+    await db.update(
+      'plants',
+      <String, Object?>{
+        'remote_id': remoteId,
+        'user_id': userId,
+        'sync_status': syncStatusSynced,
+        'last_synced_at': syncedAt,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[plantId],
+    );
+  }
+
+  Future<void> markRecognitionRecordSynced(
+    int recordId, {
+    required String remoteId,
+    required String userId,
+    required String syncedAt,
+  }) async {
+    final db = await database;
+    await db.update(
+      'recognition_records',
+      <String, Object?>{
+        'remote_id': remoteId,
+        'user_id': userId,
+        'sync_status': syncStatusSynced,
+        'last_synced_at': syncedAt,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[recordId],
+    );
+  }
+
+  Future<void> markPlantSyncFailed(int plantId) async {
+    final db = await database;
+    await db.update(
+      'plants',
+      <String, Object?>{'sync_status': syncStatusFailed},
+      where: 'id = ?',
+      whereArgs: <Object?>[plantId],
+    );
+  }
+
+  Future<void> markRecognitionRecordSyncFailed(int recordId) async {
+    final db = await database;
+    await db.update(
+      'recognition_records',
+      <String, Object?>{'sync_status': syncStatusFailed},
+      where: 'id = ?',
+      whereArgs: <Object?>[recordId],
+    );
+  }
+
+  Future<bool> upsertPlantFromRemote(
+    Map<String, dynamic> remote, {
+    required String userId,
+  }) async {
+    final db = await database;
+    final plant = Plant.fromMap(_normalizeRemotePlantMap(remote));
+    await _upsertPlantWithDatabase(
+      db,
+      plant,
+      markPendingSync: false,
+      remoteId: remote['id']?.toString(),
+      userId: userId,
+      syncedAt: remote['updated_at']?.toString(),
+      updatedAt: remote['updated_at']?.toString(),
+    );
+    return true;
+  }
+
+  Future<bool> upsertRecognitionRecordFromRemote(
+    Map<String, dynamic> remote, {
+    required String userId,
+  }) async {
+    final db = await database;
+    final plantScientificName =
+        remote['plant_scientific_name']?.toString().trim() ?? '';
+    if (plantScientificName.isEmpty) {
+      return false;
+    }
+
+    final matchingPlants = await db.query(
+      'plants',
+      where: 'scientific_name = ?',
+      whereArgs: <Object?>[plantScientificName],
+      limit: 1,
+    );
+    if (matchingPlants.isEmpty) {
+      return false;
+    }
+
+    final plantId = (matchingPlants.first['id'] as num?)?.toInt();
+    if (plantId == null) {
+      return false;
+    }
+
+    final remoteId = remote['id']?.toString() ?? '';
+    final clientRecordKey = remote['client_record_key']?.toString().trim() ?? '';
+    if (clientRecordKey.isEmpty) {
+      return false;
+    }
+
+    final existing = await db.query(
+      'recognition_records',
+      where: 'remote_id = ? OR client_record_key = ?',
+      whereArgs: <Object?>[remoteId, clientRecordKey],
+      limit: 1,
+    );
+
+    final row = <String, Object?>{
+      'plant_id': plantId,
+      'image_path': remote['image_path']?.toString() ?? '',
+      'confidence': (remote['confidence'] as num?)?.toDouble() ?? 0.0,
+      'captured_at': remote['captured_at']?.toString() ?? '',
+      'raw_json': remote['raw_json']?.toString() ?? '{}',
+      'remote_id': remoteId,
+      'user_id': userId,
+      'client_record_key': clientRecordKey,
+      'sync_status': syncStatusSynced,
+      'updated_at': remote['updated_at']?.toString() ?? '',
+      'last_synced_at': remote['updated_at']?.toString() ?? '',
+    };
+
+    if (existing.isNotEmpty) {
+      final recordId = (existing.first['id'] as num?)?.toInt();
+      await db.update(
+        'recognition_records',
+        row,
+        where: 'id = ?',
+        whereArgs: <Object?>[recordId],
+      );
+      return true;
+    }
+
+    await db.insert('recognition_records', row);
+    return true;
+  }
+
+  String _buildClientRecordKey({
+    required int plantId,
+    required String imagePath,
+    required String capturedAt,
+  }) {
+    final normalizedPath = imagePath.trim().replaceAll('\\', '/');
+    final hash = Object.hash(plantId, normalizedPath, capturedAt);
+    final safeTimestamp = capturedAt.replaceAll(RegExp(r'[^0-9T]'), '');
+    return '${plantId}_${safeTimestamp}_${hash.abs()}';
+  }
+
+  Map<String, Object?> _buildPlantRow(
+    Plant plant, {
+    required bool markPendingSync,
+    Map<String, Object?>? existingRow,
+    String? remoteId,
+    String? userId,
+    String? syncedAt,
+    String? updatedAt,
+  }) {
+    final row = Map<String, Object?>.from(plant.toMap())..remove('id');
+    final now = updatedAt ?? DateTime.now().toUtc().toIso8601String();
+    final resolvedLastSyncedAt =
+        syncedAt ?? _readString(existingRow, 'last_synced_at');
+
+    row['remote_id'] = remoteId ?? _readString(existingRow, 'remote_id');
+    row['user_id'] = userId ?? _readString(existingRow, 'user_id');
+    row['sync_status'] =
+        markPendingSync ? syncStatusPending : syncStatusSynced;
+    row['updated_at'] = now;
+    row['last_synced_at'] =
+        markPendingSync ? _readString(existingRow, 'last_synced_at') : resolvedLastSyncedAt;
+    return row;
+  }
+
+  String _readString(Map<String, Object?>? row, String key) {
+    return row == null ? '' : row[key]?.toString() ?? '';
+  }
+
+  Map<String, dynamic> _normalizeRemotePlantMap(Map<String, dynamic> remote) {
+    final normalized = Map<String, dynamic>.from(remote);
+    normalized['aliases_json'] = _normalizeJsonListField(
+      remote['aliases_json'] ?? remote['aliases'],
+    );
+    normalized['uses_json'] = _normalizeJsonListField(
+      remote['uses_json'] ?? remote['uses'],
+    );
+    normalized['is_favorite'] = _normalizeBoolField(remote['is_favorite']);
+    normalized['is_offline_available'] =
+        _normalizeBoolField(remote['is_offline_available']);
+    return normalized;
+  }
+
+  String _normalizeJsonListField(dynamic value) {
+    if (value is String) {
+      return value;
+    }
+    if (value is List) {
+      return jsonEncode(
+        value
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList(growable: false),
+      );
+    }
+    return '[]';
+  }
+
+  int _normalizeBoolField(dynamic value) {
+    if (value is bool) {
+      return value ? 1 : 0;
+    }
+    if (value is num) {
+      return value != 0 ? 1 : 0;
+    }
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1' ? 1 : 0;
+    }
+    return 0;
   }
 
   Future<void> close() async {

@@ -6,6 +6,7 @@ class AuthService {
   const AuthService({SupabaseClient? client}) : _client = client;
 
   bool get isConfigured => _client != null;
+  SupabaseClient? get client => _client;
 
   Session? get currentSession => _client?.auth.currentSession;
 

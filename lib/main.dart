@@ -6,9 +6,11 @@ import 'config/app_config.dart';
 import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/recognition_service.dart';
+import 'services/sync_service.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'ui/screens/auth_gate.dart';
+import 'ui/widgets/sync_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,12 +48,18 @@ class MyApp extends StatelessWidget {
         Provider<AuthService>.value(value: authService),
         Provider<DatabaseService>.value(value: databaseService),
         Provider<RecognitionService>.value(value: recognitionService),
+        Provider<SyncService>(
+          create: (context) => SyncService(
+            authService: context.read<AuthService>(),
+            databaseService: context.read<DatabaseService>(),
+          ),
+        ),
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
       child: MaterialApp(
         title: 'Nhận diện cây cối',
         theme: appTheme(),
-        home: const AuthGate(),
+        home: const SyncScope(child: AuthGate()),
         debugShowCheckedModeBanner: false,
       ),
     );
