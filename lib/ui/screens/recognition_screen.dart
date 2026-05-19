@@ -9,7 +9,7 @@ import '../../models/recognition_result.dart';
 import '../../services/database_service.dart';
 import '../../services/recognition_service.dart';
 import '../../state/app_state.dart';
-import '../widgets/plant_image.dart';
+import '../widgets/plant_gallery_carousel.dart';
 import 'plant_detail_screen.dart';
 
 class RecognitionScreen extends StatefulWidget {
@@ -53,14 +53,18 @@ class _RecognitionScreenState extends State<RecognitionScreen> {
         imagePath: widget.imageFile.path,
       );
       appState.markChanged();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _result = result;
         _savedPlant = savedPlant;
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = error.toString();
         _loading = false;
@@ -81,7 +85,7 @@ class _RecognitionScreenState extends State<RecognitionScreen> {
         actions: [
           IconButton(
             onPressed: _loading ? null : _runRecognition,
-            icon: const Icon(Icons.more_vert_rounded),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Nhận diện lại',
           ),
         ],
@@ -143,18 +147,10 @@ class _ResultStateState extends State<_ResultState> {
       final appState = context.read<AppState>();
       await db.toggleFavorite(plantId, nextValue);
       appState.markChanged();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            nextValue
-                ? 'Đã thêm vào yêu thích.'
-                : 'Đã xóa khỏi yêu thích.',
-          ),
-        ),
-      );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _plant = _plant.copyWith(isFavorite: !nextValue);
       });
@@ -168,15 +164,17 @@ class _ResultStateState extends State<_ResultState> {
   }
 
   Future<void> _shareSummary() async {
-    final primary = widget.result.primary;
     final summary = '''
 Kết quả nhận diện cây
 
-Tên cây: ${primary.commonName}
-Tên khoa học: ${primary.scientificName}
-Mô tả: ${primary.description}
-Môi trường sống: ${primary.habitat}
-Nhận xét: ${widget.result.analysisNote}
+Tên tiếng Việt: ${_fallbackText(_plant.commonName)}
+Tên tiếng Anh: ${_fallbackText(_plant.englishName)}
+Tên khoa học: ${_fallbackText(_plant.scientificName)}
+Mô tả ngắn: ${_fallbackText(_plant.description)}
+Ánh sáng: ${_fallbackText(_plant.lightRequirement)}
+Tưới nước: ${_fallbackText(_plant.wateringNeeds)}
+Công dụng: ${_plant.uses.isEmpty ? 'Chưa có dữ liệu.' : _plant.uses.join(', ')}
+Nhận xét AI: ${_fallbackText(widget.result.analysisNote)}
 ''';
 
     await Clipboard.setData(ClipboardData(text: summary.trim()));
@@ -185,17 +183,22 @@ Nhận xét: ${widget.result.analysisNote}
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Đã sao chép kết quả để chia sẻ.'),
+        content: Text('Đã sao chép tóm tắt kết quả.'),
       ),
     );
   }
 
+  String _fallbackText(String text) {
+    final trimmed = text.trim();
+    return trimmed.isEmpty ? 'Chưa có dữ liệu.' : trimmed;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final primary = widget.result.primary;
     final topTags = <String>[
-      ...primary.uses.take(3),
-      if (primary.uses.isEmpty) 'Nhận diện AI',
+      if (_plant.careLevel.trim().isNotEmpty) _plant.careLevel,
+      ..._plant.uses.take(2),
+      if (_plant.uses.isEmpty) 'Nhận diện AI',
     ];
 
     return SingleChildScrollView(
@@ -203,29 +206,35 @@ Nhận xét: ${widget.result.analysisNote}
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PlantImage(
-            plant: _plant,
-            height: 262,
-            width: double.infinity,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          const SizedBox(height: 22),
+          _RecognitionHero(plant: _plant),
+          const SizedBox(height: 20),
           Text(
-            primary.commonName,
+            _plant.commonName,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: const Color(0xFF185B43),
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 6),
-          Text(
-            primary.scientificName,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: const Color(0xFF7B827E),
-                  fontStyle: FontStyle.italic,
-                ),
-          ),
-          const SizedBox(height: 16),
+          if (_plant.englishName.trim().isNotEmpty)
+            Text(
+              _plant.englishName,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFF607168),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          if (_plant.scientificName.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              _plant.scientificName,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFF7B827E),
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -234,10 +243,11 @@ Nhận xét: ${widget.result.analysisNote}
                   (tag) => Chip(
                     label: Text(tag),
                     backgroundColor: const Color(0xFFCFF0D7),
-                    labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: const Color(0xFF2E5D44),
-                          fontWeight: FontWeight.w500,
-                        ),
+                    labelStyle:
+                        Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: const Color(0xFF2E5D44),
+                              fontWeight: FontWeight.w600,
+                            ),
                     side: BorderSide.none,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                   ),
@@ -246,10 +256,38 @@ Nhận xét: ${widget.result.analysisNote}
           ),
           const SizedBox(height: 18),
           _ContentCard(
+            icon: Icons.badge_outlined,
+            title: 'Tên gọi',
+            child: Column(
+              children: [
+                _InfoRow(
+                  label: 'Tên tiếng Việt',
+                  value: _fallbackText(_plant.commonName),
+                ),
+                _InfoRow(
+                  label: 'Tên gọi khác',
+                  value: _plant.aliases.isEmpty
+                      ? 'Chưa có dữ liệu.'
+                      : _plant.aliases.join(', '),
+                ),
+                _InfoRow(
+                  label: 'Tên tiếng Anh',
+                  value: _fallbackText(_plant.englishName),
+                ),
+                _InfoRow(
+                  label: 'Tên khoa học',
+                  value: _fallbackText(_plant.scientificName),
+                  italicValue: true,
+                  isLast: true,
+                ),
+              ],
+            ),
+          ),
+          _ContentCard(
             icon: Icons.description_outlined,
-            title: 'Mô tả',
+            title: 'Mô tả ngắn',
             child: Text(
-              _fallbackText(primary.description),
+              _fallbackText(_plant.description),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: const Color(0xFF3D4741),
                     height: 1.7,
@@ -257,27 +295,100 @@ Nhận xét: ${widget.result.analysisNote}
             ),
           ),
           _ContentCard(
-            icon: Icons.eco_outlined,
-            title: 'Môi trường sống',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildHabitatLines(context, primary.habitat),
+            icon: Icons.spa_outlined,
+            title: 'Chăm sóc nhanh',
+            child: _CareGrid(
+              items: [
+                _CareMetric(
+                  icon: Icons.wb_sunny_outlined,
+                  label: 'Ánh sáng',
+                  value: _fallbackText(_plant.lightRequirement),
+                ),
+                _CareMetric(
+                  icon: Icons.water_drop_outlined,
+                  label: 'Tưới nước',
+                  value: _fallbackText(_plant.wateringNeeds),
+                ),
+                _CareMetric(
+                  icon: Icons.emoji_objects_outlined,
+                  label: 'Độ dễ chăm',
+                  value: _fallbackText(_plant.careLevel),
+                ),
+                _CareMetric(
+                  icon: Icons.thermostat_outlined,
+                  label: 'Nhiệt độ',
+                  value: _fallbackText(_plant.suitableTemperature),
+                ),
+                _CareMetric(
+                  icon: Icons.grass_outlined,
+                  label: 'Loại đất',
+                  value: _fallbackText(_plant.soilType),
+                ),
+                _CareMetric(
+                  icon: Icons.compost_outlined,
+                  label: 'Bón phân',
+                  value: _fallbackText(_plant.fertilizingTips),
+                ),
+              ],
             ),
           ),
           _ContentCard(
             icon: Icons.auto_awesome_outlined,
-            title: 'Ứng dụng',
-            child: Text(
-              _buildUsesParagraph(primary.uses),
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF3D4741),
-                    height: 1.7,
-                  ),
+            title: 'Lợi ích và công dụng',
+            child: _TagWrap(
+              items: _plant.uses,
+              emptyText: 'Chưa có dữ liệu công dụng cụ thể.',
+            ),
+          ),
+          _ContentCard(
+            icon: Icons.public_outlined,
+            title: 'Nguồn gốc và sinh trưởng',
+            child: Column(
+              children: [
+                _InfoRow(
+                  label: 'Họ thực vật',
+                  value: _fallbackText(_plant.family),
+                ),
+                _InfoRow(
+                  label: 'Nguồn gốc',
+                  value: _fallbackText(_plant.origin),
+                ),
+                _InfoRow(
+                  label: 'Môi trường sống',
+                  value: _fallbackText(_plant.habitat),
+                ),
+                _InfoRow(
+                  label: 'Kích thước tối đa',
+                  value: _fallbackText(_plant.maximumSize),
+                  isLast: true,
+                ),
+              ],
+            ),
+          ),
+          _ContentCard(
+            icon: Icons.health_and_safety_outlined,
+            title: 'An toàn và lưu ý',
+            child: Column(
+              children: [
+                _InfoRow(
+                  label: 'Cảnh báo độc tính',
+                  value: _fallbackText(_plant.toxicityWarning),
+                ),
+                _InfoRow(
+                  label: 'Bệnh thường gặp',
+                  value: _fallbackText(_plant.commonIssues),
+                ),
+                _InfoRow(
+                  label: 'Phong thủy',
+                  value: _fallbackText(_plant.fengShuiMeaning),
+                  isLast: true,
+                ),
+              ],
             ),
           ),
           _ContentCard(
             icon: Icons.tips_and_updates_outlined,
-            title: 'Nhận xét',
+            title: 'Nhận xét AI',
             child: Text(
               _fallbackText(widget.result.analysisNote),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -355,66 +466,25 @@ Nhận xét: ${widget.result.analysisNote}
       ),
     );
   }
+}
 
-  List<Widget> _buildHabitatLines(BuildContext context, String habitat) {
-    final fallback = _fallbackText(habitat);
-    final pieces = habitat
-        .split(RegExp(r'[.;]'))
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .take(3)
-        .toList(growable: false);
+class _RecognitionHero extends StatelessWidget {
+  final Plant plant;
 
-    final lines = pieces.isEmpty
-        ? <String>[fallback]
-        : pieces;
+  const _RecognitionHero({
+    required this.plant,
+  });
 
-    final icons = <IconData>[
-      Icons.wb_sunny_outlined,
-      Icons.thermostat_outlined,
-      Icons.water_drop_outlined,
-    ];
-
-    return List<Widget>.generate(lines.length, (index) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: index == lines.length - 1 ? 0 : 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icons[index < icons.length ? index : icons.length - 1],
-              size: 18,
-              color: const Color(0xFF8A5B16),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                lines[index],
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF3D4741),
-                      height: 1.6,
-                    ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  String _buildUsesParagraph(List<String> uses) {
-    if (uses.isEmpty) {
-      return 'Chưa có dữ liệu ứng dụng cụ thể cho cây này.';
-    }
-    return '${uses.join('. ')}.';
-  }
-
-  String _fallbackText(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) {
-      return 'Chưa có dữ liệu.';
-    }
-    return trimmed;
+  @override
+  Widget build(BuildContext context) {
+    return PlantGalleryCarousel(
+      plant: plant,
+      height: 262,
+      borderRadius: BorderRadius.circular(24),
+      includePrimaryImageFirst: true,
+      showThumbnails: true,
+      showCounter: true,
+    );
   }
 }
 
@@ -458,12 +528,14 @@ class _ContentCard extends StatelessWidget {
                 size: 24,
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: const Color(0xFF185B43),
-                      fontWeight: FontWeight.w700,
-                    ),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: const Color(0xFF185B43),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
             ],
           ),
@@ -471,6 +543,196 @@ class _ContentCard extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool italicValue;
+  final bool isLast;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.italicValue = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 116,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFF6A746F),
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF3D4741),
+                    height: 1.6,
+                    fontStyle:
+                        italicValue ? FontStyle.italic : FontStyle.normal,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CareMetric {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _CareMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+}
+
+class _CareGrid extends StatelessWidget {
+  final List<_CareMetric> items;
+
+  const _CareGrid({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = constraints.maxWidth >= 640
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: itemWidth,
+                  child: _CareTile(item: item),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+}
+
+class _CareTile extends StatelessWidget {
+  final _CareMetric item;
+
+  const _CareTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAF7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                item.icon,
+                size: 18,
+                color: const Color(0xFF185B43),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: const Color(0xFF22322A),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            item.value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF3D4741),
+                  height: 1.5,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TagWrap extends StatelessWidget {
+  final List<String> items;
+  final String emptyText;
+
+  const _TagWrap({
+    required this.items,
+    required this.emptyText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Text(
+        emptyText,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: const Color(0xFF3D4741),
+              height: 1.6,
+            ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items
+          .map(
+            (item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F4EC),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFFD3E7D8)),
+              ),
+              child: Text(
+                item,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFF2E5D44),
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }
@@ -503,6 +765,14 @@ class _AlternativeTile extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 2),
+                if (candidate.englishName.trim().isNotEmpty)
+                  Text(
+                    candidate.englishName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF556760),
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
                 Text(
                   candidate.scientificName,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(

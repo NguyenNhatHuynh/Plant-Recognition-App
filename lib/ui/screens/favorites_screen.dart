@@ -73,8 +73,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     final normalized = query.toLowerCase();
     return plant.commonName.toLowerCase().contains(normalized) ||
+        plant.englishName.toLowerCase().contains(normalized) ||
         plant.scientificName.toLowerCase().contains(normalized) ||
         plant.family.toLowerCase().contains(normalized) ||
+        plant.description.toLowerCase().contains(normalized) ||
+        plant.habitat.toLowerCase().contains(normalized) ||
+        plant.origin.toLowerCase().contains(normalized) ||
+        plant.commonIssues.toLowerCase().contains(normalized) ||
+        plant.uses.any((use) => use.toLowerCase().contains(normalized)) ||
         plant.aliases.any((alias) => alias.toLowerCase().contains(normalized));
   }
 

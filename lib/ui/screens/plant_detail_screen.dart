@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/plant.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/plant_gallery_carousel.dart';
 import '../widgets/plant_image.dart';
 
 class PlantDetailScreen extends StatefulWidget {
@@ -98,6 +99,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
     }
   }
 
+  String _fallbackText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? 'Chưa có dữ liệu.' : trimmed;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,29 +135,59 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
               _RevealOnOpen(
                 index: 2,
                 child: _DetailInfoCard(
-                  icon: Icons.apartment_rounded,
-                  title: 'Họ thực vật',
-                  child: _DetailParagraph(text: _fallbackText(_plant.family)),
+                  icon: Icons.photo_library_outlined,
+                  title: 'Ảnh tham khảo',
+                  child: PlantGalleryCarousel(
+                    plant: _plant,
+                    height: 220,
+                    borderRadius: BorderRadius.circular(18),
+                    showHint: true,
+                    includePrimaryImageFirst: false,
+                    showThumbnails: true,
+                    showCounter: true,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
               _RevealOnOpen(
                 index: 3,
                 child: _DetailInfoCard(
-                  icon: Icons.park_outlined,
-                  title: 'Môi trường sống',
-                  child: _DetailParagraph(text: _fallbackText(_plant.habitat)),
+                  icon: Icons.badge_outlined,
+                  title: 'Tên gọi',
+                  child: Column(
+                    children: [
+                      _InfoRow(
+                        label: 'Tên tiếng Việt',
+                        value: _fallbackText(_plant.commonName),
+                      ),
+                      _InfoRow(
+                        label: 'Tên gọi khác',
+                        value: _plant.aliases.isEmpty
+                            ? 'Chưa có dữ liệu.'
+                            : _plant.aliases.join(', '),
+                      ),
+                      _InfoRow(
+                        label: 'Tên tiếng Anh',
+                        value: _fallbackText(_plant.englishName),
+                      ),
+                      _InfoRow(
+                        label: 'Tên khoa học',
+                        value: _fallbackText(_plant.scientificName),
+                        italicValue: true,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
               _RevealOnOpen(
                 index: 4,
                 child: _DetailInfoCard(
-                  icon: Icons.auto_awesome_outlined,
-                  title: 'Ứng dụng',
-                  child: _TagWrap(
-                    items: _plant.uses,
-                    emptyText: 'Chưa có dữ liệu ứng dụng.',
+                  icon: Icons.description_outlined,
+                  title: 'Mô tả ngắn',
+                  child: _DetailParagraph(
+                    text: _fallbackText(_plant.description),
                   ),
                 ),
               ),
@@ -159,11 +195,41 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
               _RevealOnOpen(
                 index: 5,
                 child: _DetailInfoCard(
-                  icon: Icons.local_florist_outlined,
-                  title: 'Tên gọi khác',
-                  child: _TagWrap(
-                    items: _plant.aliases,
-                    emptyText: 'Chưa có tên gọi khác.',
+                  icon: Icons.spa_outlined,
+                  title: 'Chăm sóc',
+                  child: _CareSpecsGrid(
+                    specs: [
+                      _PlantSpec(
+                        icon: Icons.wb_sunny_outlined,
+                        label: 'Ánh sáng',
+                        value: _fallbackText(_plant.lightRequirement),
+                      ),
+                      _PlantSpec(
+                        icon: Icons.water_drop_outlined,
+                        label: 'Tưới nước',
+                        value: _fallbackText(_plant.wateringNeeds),
+                      ),
+                      _PlantSpec(
+                        icon: Icons.emoji_objects_outlined,
+                        label: 'Mức độ chăm sóc',
+                        value: _fallbackText(_plant.careLevel),
+                      ),
+                      _PlantSpec(
+                        icon: Icons.thermostat_outlined,
+                        label: 'Nhiệt độ phù hợp',
+                        value: _fallbackText(_plant.suitableTemperature),
+                      ),
+                      _PlantSpec(
+                        icon: Icons.grass_outlined,
+                        label: 'Loại đất',
+                        value: _fallbackText(_plant.soilType),
+                      ),
+                      _PlantSpec(
+                        icon: Icons.compost_outlined,
+                        label: 'Mẹo bón phân',
+                        value: _fallbackText(_plant.fertilizingTips),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -171,10 +237,74 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
               _RevealOnOpen(
                 index: 6,
                 child: _DetailInfoCard(
-                  icon: Icons.description_outlined,
-                  title: 'Mô tả',
-                  child:
-                      _DetailParagraph(text: _fallbackText(_plant.description)),
+                  icon: Icons.auto_awesome_outlined,
+                  title: 'Công dụng và phong thủy',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SubsectionLabel(title: 'Lợi ích và công dụng'),
+                      _TagWrap(
+                        items: _plant.uses,
+                        emptyText: 'Chưa có dữ liệu công dụng.',
+                      ),
+                      const SizedBox(height: 14),
+                      _InfoRow(
+                        label: 'Ý nghĩa phong thủy',
+                        value: _fallbackText(_plant.fengShuiMeaning),
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _RevealOnOpen(
+                index: 7,
+                child: _DetailInfoCard(
+                  icon: Icons.public_outlined,
+                  title: 'Nguồn gốc và sinh trưởng',
+                  child: Column(
+                    children: [
+                      _InfoRow(
+                        label: 'Họ thực vật',
+                        value: _fallbackText(_plant.family),
+                      ),
+                      _InfoRow(
+                        label: 'Nguồn gốc xuất xứ',
+                        value: _fallbackText(_plant.origin),
+                      ),
+                      _InfoRow(
+                        label: 'Môi trường sống',
+                        value: _fallbackText(_plant.habitat),
+                      ),
+                      _InfoRow(
+                        label: 'Kích thước tối đa',
+                        value: _fallbackText(_plant.maximumSize),
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _RevealOnOpen(
+                index: 8,
+                child: _DetailInfoCard(
+                  icon: Icons.health_and_safety_outlined,
+                  title: 'An toàn và bệnh thường gặp',
+                  child: Column(
+                    children: [
+                      _InfoRow(
+                        label: 'Cảnh báo độc tính',
+                        value: _fallbackText(_plant.toxicityWarning),
+                      ),
+                      _InfoRow(
+                        label: 'Dấu hiệu bệnh thường gặp',
+                        value: _fallbackText(_plant.commonIssues),
+                        isLast: true,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -182,14 +312,6 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
         ),
       ),
     );
-  }
-
-  String _fallbackText(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return 'Chưa có dữ liệu.';
-    }
-    return trimmed;
   }
 }
 
@@ -338,7 +460,7 @@ class _PlantHeroSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    plant.scientificName.isEmpty
+                    plant.scientificName.trim().isEmpty
                         ? 'Chưa có tên khoa học'
                         : plant.scientificName,
                     maxLines: 2,
@@ -356,6 +478,18 @@ class _PlantHeroSection extends StatelessWidget {
                           ],
                         ),
                   ),
+                  if (plant.englishName.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      plant.englishName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -373,6 +507,28 @@ class _PlantSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final summaryItems = <_QuickMetaItem>[
+      _QuickMetaItem(
+        icon: Icons.eco_outlined,
+        label: plant.family.trim().isEmpty ? 'Chưa rõ họ thực vật' : plant.family,
+      ),
+      if (plant.englishName.trim().isNotEmpty)
+        _QuickMetaItem(
+          icon: Icons.language_rounded,
+          label: plant.englishName,
+        ),
+      if (plant.careLevel.trim().isNotEmpty)
+        _QuickMetaItem(
+          icon: Icons.emoji_objects_outlined,
+          label: 'Chăm sóc: ${plant.careLevel}',
+        ),
+      if (plant.origin.trim().isNotEmpty)
+        _QuickMetaItem(
+          icon: Icons.public_outlined,
+          label: plant.origin,
+        ),
+    ];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
@@ -396,12 +552,14 @@ class _PlantSummaryCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              _MetaPill(
-                icon: Icons.eco_outlined,
-                label: plant.family.isEmpty ? 'Chưa rõ họ thực vật' : plant.family,
-              ),
-            ],
+            children: summaryItems
+                .map(
+                  (item) => _MetaPill(
+                    icon: item.icon,
+                    label: item.label,
+                  ),
+                )
+                .toList(growable: false),
           ),
         ],
       ),
@@ -456,13 +614,15 @@ class _DetailInfoCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: _PlantDetailScreenState._sectionTitle,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15.5,
-                    ),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _PlantDetailScreenState._sectionTitle,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15.5,
+                      ),
+                ),
               ),
             ],
           ),
@@ -488,6 +648,77 @@ class _DetailParagraph extends StatelessWidget {
             fontSize: 14.5,
             height: 1.55,
           ),
+    );
+  }
+}
+
+class _SubsectionLabel extends StatelessWidget {
+  final String title;
+
+  const _SubsectionLabel({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: const Color(0xFF2A3B33),
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool italicValue;
+  final bool isLast;
+
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.italicValue = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 116,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFF6E7B74),
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: _PlantDetailScreenState._bodyText,
+                    height: 1.5,
+                    fontStyle:
+                        italicValue ? FontStyle.italic : FontStyle.normal,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -534,6 +765,16 @@ class _TagWrap extends StatelessWidget {
   }
 }
 
+class _QuickMetaItem {
+  final IconData icon;
+  final String label;
+
+  const _QuickMetaItem({
+    required this.icon,
+    required this.label,
+  });
+}
+
 class _MetaPill extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -568,6 +809,100 @@ class _MetaPill extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlantSpec {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _PlantSpec({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+}
+
+class _CareSpecsGrid extends StatelessWidget {
+  final List<_PlantSpec> specs;
+
+  const _CareSpecsGrid({
+    required this.specs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileWidth = constraints.maxWidth >= 640
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: specs
+              .map(
+                (spec) => SizedBox(
+                  width: tileWidth,
+                  child: _SpecTile(spec: spec),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+}
+
+class _SpecTile extends StatelessWidget {
+  final _PlantSpec spec;
+
+  const _SpecTile({required this.spec});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAF7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE4EBE5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                spec.icon,
+                size: 18,
+                color: _PlantDetailScreenState._primaryGreen,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  spec.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: const Color(0xFF2A3B33),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            spec.value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: _PlantDetailScreenState._bodyText,
+                  height: 1.5,
+                ),
           ),
         ],
       ),

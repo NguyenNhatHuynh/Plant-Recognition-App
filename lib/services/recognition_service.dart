@@ -18,7 +18,7 @@ class RecognitionException implements Exception {
 }
 
 class RecognitionService {
-  static const int _maxOutputTokens = 3000;
+  static const int _maxOutputTokens = 5000;
 
   final String apiKey;
   final String remoteBaseUrl;
@@ -243,21 +243,47 @@ Phan tich anh cay va tra ve CHI JSON hop le theo dung cau truc sau:
 {
   "primary": {
     "common_name": "Ten pho thong bang tieng Viet",
+    "aliases": ["Ten goi khac 1", "Ten goi khac 2"],
+    "english_name": "Ten pho bien bang tieng Anh",
     "scientific_name": "Ten khoa hoc",
     "family": "Ho thuc vat",
-    "description": "Mo ta sinh hoc ngan gon, chinh xac",
+    "description": "Mo ta ngan gon, de hieu, tap trung vao dac diem nhan dien cua cay",
     "habitat": "Moi truong song dien hinh",
+    "light_requirement": "Yeu cau anh sang",
+    "watering_needs": "Nhu cau tuoi nuoc",
+    "care_level": "De, Trung binh hoac Kho",
+    "suitable_temperature": "Khoang nhiet do thich hop",
+    "soil_type": "Loai dat phu hop",
+    "fertilizing_tips": "Meo bon phan ngan gon",
+    "toxicity_warning": "Canh bao doc tinh voi tre em va thu cung",
     "uses": ["Ung dung 1", "Ung dung 2"],
+    "maximum_size": "Kich thuoc toi da khi truong thanh",
+    "feng_shui_meaning": "Y nghia phong thuy neu co",
+    "origin": "Nguon goc xuat xu",
+    "common_issues": "Dau hieu benh hoac van de thuong gap",
     "confidence": 0.0
   },
   "alternatives": [
     {
       "common_name": "Ten pho thong",
+      "aliases": ["Ten goi khac"],
+      "english_name": "Ten tieng Anh",
       "scientific_name": "Ten khoa hoc",
       "family": "Ho thuc vat",
       "description": "Mo ta ngan",
       "habitat": "Moi truong song",
+      "light_requirement": "Yeu cau anh sang",
+      "watering_needs": "Nhu cau tuoi nuoc",
+      "care_level": "Do kho cham soc",
+      "suitable_temperature": "Khoang nhiet do",
+      "soil_type": "Loai dat",
+      "fertilizing_tips": "Meo bon phan",
+      "toxicity_warning": "Canh bao doc tinh",
       "uses": ["Ung dung"],
+      "maximum_size": "Kich thuoc toi da",
+      "feng_shui_meaning": "Y nghia phong thuy",
+      "origin": "Nguon goc",
+      "common_issues": "Van de thuong gap",
       "confidence": 0.0
     }
   ],
@@ -265,8 +291,11 @@ Phan tich anh cay va tra ve CHI JSON hop le theo dung cau truc sau:
 }
 
 Quy tac:
-- Tra ve tieng Viet cho common_name, description, habitat, uses, analysis_note.
+- Tra ve tieng Viet cho common_name, aliases, description, habitat, light_requirement, watering_needs, care_level, suitable_temperature, soil_type, fertilizing_tips, toxicity_warning, uses, maximum_size, feng_shui_meaning, origin, common_issues, analysis_note.
+- english_name la ten pho bien quoc te neu biet, khong thi de chuoi rong.
 - scientific_name phai la ten Latin chuan neu biet.
+- aliases la cac ten goi dia phuong, ten goi cu, hoac ten thuong mai pho bien; neu khong co thi tra ve [].
+- care_level chi nhan mot trong ba gia tri: "De", "Trung binh", "Kho" neu co du lieu.
 - confidence nam trong khoang 0.0 den 1.0.
 - Neu khong chac chan, van chon loai gan nhat va giam confidence.
 - Neu khong nhan ra ro, van tra dung JSON va de confidence thap.

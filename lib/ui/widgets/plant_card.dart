@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/plant.dart';
 import 'favorite_action_button.dart';
+import 'plant_gallery_carousel.dart';
 import 'plant_image.dart';
 
 class PlantCard extends StatelessWidget {
@@ -10,6 +11,7 @@ class PlantCard extends StatelessWidget {
   final bool compact;
   final VoidCallback? onFavoriteTap;
   final bool isFavoriteLoading;
+  final bool showGalleryPreview;
 
   const PlantCard({
     super.key,
@@ -18,6 +20,7 @@ class PlantCard extends StatelessWidget {
     this.compact = false,
     this.onFavoriteTap,
     this.isFavoriteLoading = false,
+    this.showGalleryPreview = false,
   });
 
   @override
@@ -58,7 +61,7 @@ class PlantCard extends StatelessWidget {
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -71,14 +74,23 @@ class PlantCard extends StatelessWidget {
                             color: const Color(0xFF1B4332),
                           ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       plant.scientificName,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: const Color(0xFF7F5539),
+                            height: 1.2,
                           ),
                     ),
+                    if (showGalleryPreview) ...[
+                      const SizedBox(height: 10),
+                      PlantGalleryPreviewStrip(
+                        plant: plant,
+                        includePrimaryImageFirst: false,
+                      ),
+                    ],
                   ],
                 ),
               ),

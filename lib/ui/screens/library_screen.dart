@@ -87,7 +87,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'TÃ¬m theo tÃªn, há», mÃ´ táº£...',
+                  hintText: 'Tìm theo tên Việt, tên Anh, tên khoa học...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: const Color(0xFFF5F7F5),
@@ -120,6 +120,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           plant: plant,
                           isFavoriteLoading: plant.id != null &&
                               _pendingFavoriteIds.contains(plant.id),
+                          showGalleryPreview: _query.trim().isNotEmpty,
                           onFavoriteTap: () => _toggleFavorite(plant),
                           onTap: () {
                             Navigator.push(
