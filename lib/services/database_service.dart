@@ -96,6 +96,7 @@ class DatabaseService {
       },
       onCreate: (db, version) async {
         await _createSchema(db);
+        await _ensureSupplementalIndexes(db);
         await _seedPlants(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -183,22 +184,6 @@ class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_recognition_records_captured_at
       ON recognition_records (captured_at DESC)
     ''');
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_plants_sync_status
-      ON plants (sync_status)
-    ''');
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_recognition_records_sync_status
-      ON recognition_records (sync_status)
-    ''');
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_recognition_records_client_record_key
-      ON recognition_records (client_record_key)
-    ''');
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_recognition_usage_user_date
-      ON recognition_usage (user_id, usage_date)
-    ''');
   }
 
   Future<void> _runMigrations(
@@ -229,6 +214,8 @@ class DatabaseService {
       await _backfillSyncMetadata(db);
       await _ensureRecognitionUsageTable(db);
     }
+
+    await _ensureSupplementalIndexes(db);
   }
 
   Future<void> _ensurePlantColumns(Database db) async {
@@ -289,6 +276,25 @@ class DatabaseService {
       }
     }
 
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_usage_user_date
+      ON recognition_usage (user_id, usage_date)
+    ''');
+  }
+
+  Future<void> _ensureSupplementalIndexes(Database db) async {
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_plants_sync_status
+      ON plants (sync_status)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_records_sync_status
+      ON recognition_records (sync_status)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_records_client_record_key
+      ON recognition_records (client_record_key)
+    ''');
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_recognition_usage_user_date
       ON recognition_usage (user_id, usage_date)
