@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -21,18 +22,34 @@ class RecognitionService {
   static const int _maxOutputTokens = 5000;
 
   final String apiKey;
+  final String publishableKey;
   final String remoteBaseUrl;
   final http.Client _client;
 
   RecognitionService({
     required this.apiKey,
+    this.publishableKey = '',
     this.remoteBaseUrl = '',
     http.Client? client,
   }) : _client = client ?? http.Client();
 
-  Future<RecognitionResult> recognizePlant(XFile imageFile) async {
+  Future<RecognitionResult> recognizePlant(
+    XFile imageFile, {
+    String? accessToken,
+  }) async {
     if (remoteBaseUrl.isNotEmpty) {
-      return _withRetry(() => _recognizeViaBackend(imageFile));
+      return _withRetry(
+        () => _recognizeViaBackend(
+          imageFile,
+          accessToken: accessToken,
+        ),
+      );
+    }
+
+    if (kReleaseMode) {
+      throw const RecognitionException(
+        'Ban phat hanh yeu cau backend nhan dien. Hay cau hinh RECOGNITION_API_BASE_URL va trien khai Edge Function truoc khi release.',
+      );
     }
 
     return _withRetry(() => _recognizeDirectly(imageFile));
@@ -174,15 +191,30 @@ class RecognitionService {
     }
   }
 
-  Future<RecognitionResult> _recognizeViaBackend(XFile imageFile) async {
+  Future<RecognitionResult> _recognizeViaBackend(
+    XFile imageFile, {
+    String? accessToken,
+  }) async {
     final bytes = await imageFile.readAsBytes();
     final uri = Uri.parse(
       '${remoteBaseUrl.replaceAll(RegExp(r'/$'), '')}/recognize',
     );
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    final normalizedPublishableKey = publishableKey.trim();
+    if (normalizedPublishableKey.isNotEmpty) {
+      headers['apikey'] = normalizedPublishableKey;
+    }
+    final normalizedToken = accessToken?.trim() ?? '';
+    if (normalizedToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $normalizedToken';
+    }
+
     final response = await _client
         .post(
           uri,
-          headers: const {'Content-Type': 'application/json'},
+          headers: headers,
           body: jsonEncode({
             'mime_type': _mimeTypeFor(imageFile.path),
             'image_base64': base64Encode(bytes),

@@ -10,10 +10,11 @@ import '../models/recognition_result.dart';
 class DatabaseService {
   static Database? _db;
   static const String _databaseName = 'plants.db';
-  static const int _version = 5;
+  static const int _version = 6;
   static const String syncStatusPending = 'pending';
   static const String syncStatusSynced = 'synced';
   static const String syncStatusFailed = 'failed';
+  static const int dailyRecognitionLimit = 15;
 
   static const Map<String, String> _plantColumnDefinitions =
       <String, String>{
@@ -45,6 +46,14 @@ class DatabaseService {
     'sync_status': "TEXT NOT NULL DEFAULT 'pending'",
     'updated_at': "TEXT NOT NULL DEFAULT ''",
     'last_synced_at': "TEXT NOT NULL DEFAULT ''",
+      };
+
+  static const Map<String, String> _recognitionUsageColumnDefinitions =
+      <String, String>{
+    'user_id': "TEXT NOT NULL DEFAULT ''",
+    'usage_date': "TEXT NOT NULL DEFAULT ''",
+    'attempt_count': 'INTEGER NOT NULL DEFAULT 0',
+    'updated_at': "TEXT NOT NULL DEFAULT ''",
   };
 
   static const List<String> _searchColumns = <String>[
@@ -148,6 +157,17 @@ class DatabaseService {
     ''');
 
     await db.execute('''
+      CREATE TABLE IF NOT EXISTS recognition_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        usage_date TEXT NOT NULL,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT '',
+        UNIQUE(user_id, usage_date)
+      )
+    ''');
+
+    await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_plants_common_name
       ON plants (common_name)
     ''');
@@ -175,6 +195,10 @@ class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_recognition_records_client_record_key
       ON recognition_records (client_record_key)
     ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_usage_user_date
+      ON recognition_usage (user_id, usage_date)
+    ''');
   }
 
   Future<void> _runMigrations(
@@ -195,10 +219,15 @@ class DatabaseService {
       await _backfillSyncMetadata(db);
     }
 
+    if (oldVersion < 6) {
+      await _ensureRecognitionUsageTable(db);
+    }
+
     if (newVersion > oldVersion) {
       await _ensurePlantColumns(db);
       await _ensureRecognitionRecordColumns(db);
       await _backfillSyncMetadata(db);
+      await _ensureRecognitionUsageTable(db);
     }
   }
 
@@ -232,6 +261,38 @@ class DatabaseService {
         );
       }
     }
+  }
+
+  Future<void> _ensureRecognitionUsageTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS recognition_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        usage_date TEXT NOT NULL,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT '',
+        UNIQUE(user_id, usage_date)
+      )
+    ''');
+
+    final columns = await db.rawQuery('PRAGMA table_info(recognition_usage)');
+    final existingNames = columns
+        .map((item) => item['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+
+    for (final entry in _recognitionUsageColumnDefinitions.entries) {
+      if (!existingNames.contains(entry.key)) {
+        await db.execute(
+          'ALTER TABLE recognition_usage ADD COLUMN ${entry.key} ${entry.value}',
+        );
+      }
+    }
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recognition_usage_user_date
+      ON recognition_usage (user_id, usage_date)
+    ''');
   }
 
   Future<void> _backfillSyncMetadata(Database db) async {
@@ -756,6 +817,96 @@ class DatabaseService {
     return maps.map(RecognitionRecord.fromMap).toList(growable: false);
   }
 
+  Future<int> getRecognitionAttemptsToday({
+    required String userId,
+    DateTime? now,
+  }) async {
+    final trimmedUserId = userId.trim();
+    if (trimmedUserId.isEmpty) {
+      return 0;
+    }
+
+    final db = await database;
+    final usageDate = _usageDateKey(now ?? DateTime.now());
+    final rows = await db.query(
+      'recognition_usage',
+      columns: <String>['attempt_count'],
+      where: 'user_id = ? AND usage_date = ?',
+      whereArgs: <Object?>[trimmedUserId, usageDate],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) {
+      return 0;
+    }
+
+    return (rows.first['attempt_count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<int> getRemainingRecognitionAttemptsToday({
+    required String userId,
+    int limit = dailyRecognitionLimit,
+    DateTime? now,
+  }) async {
+    final used = await getRecognitionAttemptsToday(
+      userId: userId,
+      now: now,
+    );
+    final remaining = limit - used;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  Future<bool> tryConsumeRecognitionAttempt({
+    required String userId,
+    int limit = dailyRecognitionLimit,
+    DateTime? now,
+  }) async {
+    final trimmedUserId = userId.trim();
+    if (trimmedUserId.isEmpty) {
+      return false;
+    }
+
+    final db = await database;
+    final timestamp = (now ?? DateTime.now()).toUtc().toIso8601String();
+    final usageDate = _usageDateKey(now ?? DateTime.now());
+
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'recognition_usage',
+        where: 'user_id = ? AND usage_date = ?',
+        whereArgs: <Object?>[trimmedUserId, usageDate],
+        limit: 1,
+      );
+
+      if (rows.isEmpty) {
+        await txn.insert('recognition_usage', <String, Object?>{
+          'user_id': trimmedUserId,
+          'usage_date': usageDate,
+          'attempt_count': 1,
+          'updated_at': timestamp,
+        });
+        return true;
+      }
+
+      final row = rows.first;
+      final currentCount = (row['attempt_count'] as num?)?.toInt() ?? 0;
+      if (currentCount >= limit) {
+        return false;
+      }
+
+      await txn.update(
+        'recognition_usage',
+        <String, Object?>{
+          'attempt_count': currentCount + 1,
+          'updated_at': timestamp,
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[(row['id'] as num?)?.toInt()],
+      );
+      return true;
+    });
+  }
+
   Future<void> toggleFavorite(int plantId, bool isFavorite) async {
     final db = await database;
     await db.update(
@@ -1039,6 +1190,13 @@ class DatabaseService {
       return value.toLowerCase() == 'true' || value == '1' ? 1 : 0;
     }
     return 0;
+  }
+
+  String _usageDateKey(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
   }
 
   Future<void> close() async {

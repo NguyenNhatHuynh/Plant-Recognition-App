@@ -43,6 +43,7 @@ class AppBootstrap {
       databaseService: DatabaseService(),
       recognitionService: RecognitionService(
         apiKey: config.geminiApiKey,
+        publishableKey: config.supabasePublishableKey,
         remoteBaseUrl: config.recognitionApiBaseUrl,
       ),
     );

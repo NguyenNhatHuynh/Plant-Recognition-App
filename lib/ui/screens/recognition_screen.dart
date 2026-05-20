@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../models/plant.dart';
 import '../../models/recognition_candidate.dart';
 import '../../models/recognition_result.dart';
+import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../services/recognition_service.dart';
 import '../../state/app_state.dart';
@@ -37,6 +38,7 @@ class _RecognitionScreenState extends State<RecognitionScreen> {
   }
 
   Future<void> _runRecognition() async {
+    final authService = context.read<AuthService>();
     final recognitionService = context.read<RecognitionService>();
     final databaseService = context.read<DatabaseService>();
     final appState = context.read<AppState>();
@@ -47,7 +49,34 @@ class _RecognitionScreenState extends State<RecognitionScreen> {
     });
 
     try {
-      final result = await recognitionService.recognizePlant(widget.imageFile);
+      final userId = authService.currentUser?.id.trim() ?? '';
+      if (userId.isEmpty) {
+        throw const RecognitionException(
+          'Bạn cần đăng nhập để sử dụng tính năng nhận diện cây.',
+        );
+      }
+
+      if (recognitionService.remoteBaseUrl.isEmpty) {
+        final didReserveAttempt =
+            await databaseService.tryConsumeRecognitionAttempt(
+          userId: userId,
+        );
+        if (!didReserveAttempt) {
+          final usedAttempts =
+              await databaseService.getRecognitionAttemptsToday(
+            userId: userId,
+          );
+          throw RecognitionException(
+            'Bạn đã dùng hết $usedAttempts/${DatabaseService.dailyRecognitionLimit} lượt nhận diện hôm nay. Vui lòng quay lại vào ngày mai.',
+          );
+        }
+      }
+
+      final accessToken = authService.currentSession?.accessToken;
+      final result = await recognitionService.recognizePlant(
+        widget.imageFile,
+        accessToken: accessToken,
+      );
       final savedPlant = await databaseService.saveRecognition(
         result,
         imagePath: widget.imageFile.path,
