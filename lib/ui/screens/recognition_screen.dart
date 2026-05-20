@@ -449,7 +449,9 @@ Nhận xét AI: ${_fallbackText(widget.result.analysisNote)}
                 color: Colors.white,
               ),
               label: Text(
-                _plant.isFavorite ? 'Đã thêm yêu thích' : 'Thêm vào yêu thích',
+                _plant.isFavorite
+                    ? 'Đã thêm yêu thích'
+                    : 'Thêm vào yêu thích',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF185B43),

@@ -10,7 +10,7 @@ import '../models/recognition_result.dart';
 class DatabaseService {
   static Database? _db;
   static const String _databaseName = 'plants.db';
-  static const int _version = 6;
+  static const int _version = 7;
   static const String syncStatusPending = 'pending';
   static const String syncStatusSynced = 'synced';
   static const String syncStatusFailed = 'failed';
@@ -208,11 +208,16 @@ class DatabaseService {
       await _ensureRecognitionUsageTable(db);
     }
 
+    if (oldVersion < 7) {
+      await _repairLegacyMisencodedPlantData(db);
+    }
+
     if (newVersion > oldVersion) {
       await _ensurePlantColumns(db);
       await _ensureRecognitionRecordColumns(db);
       await _backfillSyncMetadata(db);
       await _ensureRecognitionUsageTable(db);
+      await _repairLegacyMisencodedPlantData(db);
     }
 
     await _ensureSupplementalIndexes(db);
@@ -582,9 +587,121 @@ class DatabaseService {
     for (final plant in seedPlants) {
       await _upsertPlantWithDatabase(
         db,
-        plant,
+        _repairPlantEncoding(plant),
         markPendingSync: false,
         updatedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+    }
+  }
+
+  Future<void> _repairLegacyMisencodedPlantData(Database db) async {
+    final rows = await db.query(
+      'plants',
+      columns: <String>[
+        'id',
+        'common_name',
+        'aliases_json',
+        'description',
+        'habitat',
+        'light_requirement',
+        'watering_needs',
+        'care_level',
+        'suitable_temperature',
+        'soil_type',
+        'fertilizing_tips',
+        'toxicity_warning',
+        'uses_json',
+        'maximum_size',
+        'feng_shui_meaning',
+        'origin',
+        'common_issues',
+      ],
+    );
+
+    for (final row in rows) {
+      final fixedCommonName = _repairPotentialMojibake(
+        row['common_name']?.toString() ?? '',
+      );
+      final fixedAliases = _repairJsonStringList(
+        row['aliases_json']?.toString() ?? '[]',
+      );
+      final fixedDescription = _repairPotentialMojibake(
+        row['description']?.toString() ?? '',
+      );
+      final fixedHabitat = _repairPotentialMojibake(
+        row['habitat']?.toString() ?? '',
+      );
+      final fixedLightRequirement = _repairPotentialMojibake(
+        row['light_requirement']?.toString() ?? '',
+      );
+      final fixedWateringNeeds = _repairPotentialMojibake(
+        row['watering_needs']?.toString() ?? '',
+      );
+      final fixedCareLevel = _repairPotentialMojibake(
+        row['care_level']?.toString() ?? '',
+      );
+      final fixedSuitableTemperature = _repairPotentialMojibake(
+        row['suitable_temperature']?.toString() ?? '',
+      );
+      final fixedSoilType = _repairPotentialMojibake(
+        row['soil_type']?.toString() ?? '',
+      );
+      final fixedFertilizingTips = _repairPotentialMojibake(
+        row['fertilizing_tips']?.toString() ?? '',
+      );
+      final fixedToxicityWarning = _repairPotentialMojibake(
+        row['toxicity_warning']?.toString() ?? '',
+      );
+      final fixedUses = _repairJsonStringList(
+        row['uses_json']?.toString() ?? '[]',
+      );
+      final fixedMaximumSize = _repairPotentialMojibake(
+        row['maximum_size']?.toString() ?? '',
+      );
+      final fixedFengShuiMeaning = _repairPotentialMojibake(
+        row['feng_shui_meaning']?.toString() ?? '',
+      );
+      final fixedOrigin = _repairPotentialMojibake(
+        row['origin']?.toString() ?? '',
+      );
+      final fixedCommonIssues = _repairPotentialMojibake(
+        row['common_issues']?.toString() ?? '',
+      );
+
+      final updates = <String, Object?>{};
+      void trackUpdate(String column, String nextValue) {
+        final currentValue = row[column]?.toString() ?? '';
+        if (currentValue != nextValue) {
+          updates[column] = nextValue;
+        }
+      }
+
+      trackUpdate('common_name', fixedCommonName);
+      trackUpdate('aliases_json', fixedAliases);
+      trackUpdate('description', fixedDescription);
+      trackUpdate('habitat', fixedHabitat);
+      trackUpdate('light_requirement', fixedLightRequirement);
+      trackUpdate('watering_needs', fixedWateringNeeds);
+      trackUpdate('care_level', fixedCareLevel);
+      trackUpdate('suitable_temperature', fixedSuitableTemperature);
+      trackUpdate('soil_type', fixedSoilType);
+      trackUpdate('fertilizing_tips', fixedFertilizingTips);
+      trackUpdate('toxicity_warning', fixedToxicityWarning);
+      trackUpdate('uses_json', fixedUses);
+      trackUpdate('maximum_size', fixedMaximumSize);
+      trackUpdate('feng_shui_meaning', fixedFengShuiMeaning);
+      trackUpdate('origin', fixedOrigin);
+      trackUpdate('common_issues', fixedCommonIssues);
+
+      if (updates.isEmpty) {
+        continue;
+      }
+
+      await db.update(
+        'plants',
+        updates,
+        where: 'id = ?',
+        whereArgs: <Object?>[(row['id'] as num?)?.toInt()],
       );
     }
   }
@@ -694,6 +811,32 @@ class DatabaseService {
       isFavorite: existing.isFavorite,
       isOfflineAvailable:
           incoming.isOfflineAvailable || existing.isOfflineAvailable,
+    );
+  }
+
+  Plant _repairPlantEncoding(Plant plant) {
+    return plant.copyWith(
+      commonName: _repairPotentialMojibake(plant.commonName),
+      aliases: plant.aliases
+          .map(_repairPotentialMojibake)
+          .toList(growable: false),
+      description: _repairPotentialMojibake(plant.description),
+      habitat: _repairPotentialMojibake(plant.habitat),
+      lightRequirement: _repairPotentialMojibake(plant.lightRequirement),
+      wateringNeeds: _repairPotentialMojibake(plant.wateringNeeds),
+      careLevel: _repairPotentialMojibake(plant.careLevel),
+      suitableTemperature:
+          _repairPotentialMojibake(plant.suitableTemperature),
+      soilType: _repairPotentialMojibake(plant.soilType),
+      fertilizingTips: _repairPotentialMojibake(plant.fertilizingTips),
+      toxicityWarning: _repairPotentialMojibake(plant.toxicityWarning),
+      uses: plant.uses
+          .map(_repairPotentialMojibake)
+          .toList(growable: false),
+      maximumSize: _repairPotentialMojibake(plant.maximumSize),
+      fengShuiMeaning: _repairPotentialMojibake(plant.fengShuiMeaning),
+      origin: _repairPotentialMojibake(plant.origin),
+      commonIssues: _repairPotentialMojibake(plant.commonIssues),
     );
   }
 
@@ -1185,6 +1328,28 @@ class DatabaseService {
     return '[]';
   }
 
+  String _repairJsonStringList(String source) {
+    final trimmed = source.trim();
+    if (trimmed.isEmpty) {
+      return '[]';
+    }
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is List) {
+        return jsonEncode(
+          decoded
+              .map((item) => _repairPotentialMojibake(item.toString()))
+              .toList(growable: false),
+        );
+      }
+    } catch (_) {
+      // Fall back to the original string when the legacy value is not JSON.
+    }
+
+    return trimmed;
+  }
+
   int _normalizeBoolField(dynamic value) {
     if (value is bool) {
       return value ? 1 : 0;
@@ -1203,6 +1368,34 @@ class DatabaseService {
     final month = local.month.toString().padLeft(2, '0');
     final day = local.day.toString().padLeft(2, '0');
     return '${local.year}-$month-$day';
+  }
+
+  String _repairPotentialMojibake(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) {
+      return input;
+    }
+
+    const mojibakeSignals = <String>[
+      'Ã',
+      'Ä',
+      'Æ',
+      'Â',
+      'áº',
+      'á»',
+      'á»Ÿ',
+      'á»£',
+    ];
+    final looksBroken = mojibakeSignals.any(trimmed.contains);
+    if (!looksBroken) {
+      return input;
+    }
+
+    try {
+      return utf8.decode(latin1.encode(trimmed));
+    } catch (_) {
+      return input;
+    }
   }
 
   Future<void> close() async {

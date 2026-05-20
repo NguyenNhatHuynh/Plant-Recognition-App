@@ -134,26 +134,50 @@ class Plant {
   factory Plant.fromMap(Map<String, dynamic> map) {
     return Plant(
       id: map['id'] as int?,
-      commonName: map['common_name'] as String? ?? '',
+      commonName: _repairPotentialMojibake(
+        map['common_name'] as String? ?? '',
+      ),
       aliases: _parseList(map['aliases_json']),
-      englishName: map['english_name'] as String? ?? '',
-      scientificName: map['scientific_name'] as String? ?? '',
-      family: map['family'] as String? ?? '',
-      description: map['description'] as String? ?? '',
-      habitat: map['habitat'] as String? ?? '',
-      lightRequirement: map['light_requirement'] as String? ?? '',
-      wateringNeeds: map['watering_needs'] as String? ?? '',
-      careLevel: map['care_level'] as String? ?? '',
-      suitableTemperature: map['suitable_temperature'] as String? ?? '',
-      soilType: map['soil_type'] as String? ?? '',
-      fertilizingTips: map['fertilizing_tips'] as String? ?? '',
-      toxicityWarning: map['toxicity_warning'] as String? ?? '',
+      englishName: _repairPotentialMojibake(
+        map['english_name'] as String? ?? '',
+      ),
+      scientificName: _repairPotentialMojibake(
+        map['scientific_name'] as String? ?? '',
+      ),
+      family: _repairPotentialMojibake(map['family'] as String? ?? ''),
+      description: _repairPotentialMojibake(
+        map['description'] as String? ?? '',
+      ),
+      habitat: _repairPotentialMojibake(map['habitat'] as String? ?? ''),
+      lightRequirement: _repairPotentialMojibake(
+        map['light_requirement'] as String? ?? '',
+      ),
+      wateringNeeds: _repairPotentialMojibake(
+        map['watering_needs'] as String? ?? '',
+      ),
+      careLevel: _repairPotentialMojibake(map['care_level'] as String? ?? ''),
+      suitableTemperature: _repairPotentialMojibake(
+        map['suitable_temperature'] as String? ?? '',
+      ),
+      soilType: _repairPotentialMojibake(map['soil_type'] as String? ?? ''),
+      fertilizingTips: _repairPotentialMojibake(
+        map['fertilizing_tips'] as String? ?? '',
+      ),
+      toxicityWarning: _repairPotentialMojibake(
+        map['toxicity_warning'] as String? ?? '',
+      ),
       uses: _parseList(map['uses_json']),
-      maximumSize: map['maximum_size'] as String? ?? '',
-      fengShuiMeaning: map['feng_shui_meaning'] as String? ?? '',
-      origin: map['origin'] as String? ?? '',
-      commonIssues: map['common_issues'] as String? ?? '',
-      imagePath: map['image_path'] as String? ?? '',
+      maximumSize: _repairPotentialMojibake(
+        map['maximum_size'] as String? ?? '',
+      ),
+      fengShuiMeaning: _repairPotentialMojibake(
+        map['feng_shui_meaning'] as String? ?? '',
+      ),
+      origin: _repairPotentialMojibake(map['origin'] as String? ?? ''),
+      commonIssues: _repairPotentialMojibake(
+        map['common_issues'] as String? ?? '',
+      ),
+      imagePath: _repairPotentialMojibake(map['image_path'] as String? ?? ''),
       isFavorite: (map['is_favorite'] as int? ?? 0) == 1,
       isOfflineAvailable: (map['is_offline_available'] as int? ?? 0) == 1,
     );
@@ -174,18 +198,43 @@ class Plant {
         final decoded = jsonDecode(value);
         if (decoded is List) {
           return decoded
-              .map((item) => item.toString().trim())
+              .map((item) => _repairPotentialMojibake(item.toString()).trim())
               .where((item) => item.isNotEmpty)
               .toList(growable: false);
         }
       } catch (_) {
         return value
             .split(RegExp(r'[,;|]'))
-            .map((item) => item.trim())
+            .map((item) => _repairPotentialMojibake(item).trim())
             .where((item) => item.isNotEmpty)
             .toList(growable: false);
       }
     }
     return const [];
+  }
+
+  static String _repairPotentialMojibake(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) {
+      return input;
+    }
+
+    const mojibakeSignals = <String>[
+      'Ã',
+      'Ä',
+      'Æ',
+      'Â',
+      'áº',
+      'á»',
+    ];
+    if (!mojibakeSignals.any(trimmed.contains)) {
+      return input;
+    }
+
+    try {
+      return utf8.decode(latin1.encode(trimmed));
+    } catch (_) {
+      return input;
+    }
   }
 }
