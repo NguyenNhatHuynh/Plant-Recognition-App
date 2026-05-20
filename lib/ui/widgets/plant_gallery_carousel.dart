@@ -286,7 +286,7 @@ Future<List<String>> buildGalleryImages(
   required bool includePrimaryImageFirst,
 }) async {
   final sources = <String>[];
-  final primaryImage = plant.imagePath.trim();
+  final primaryImage = await _resolvePrimaryGalleryImage(plant.imagePath);
 
   if (includePrimaryImageFirst && primaryImage.isNotEmpty) {
     sources.add(primaryImage);
@@ -302,6 +302,20 @@ Future<List<String>> buildGalleryImages(
   }
 
   return sources.toSet().take(4).toList(growable: false);
+}
+
+Future<String> _resolvePrimaryGalleryImage(String imagePath) async {
+  final trimmed = imagePath.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (await File(trimmed).exists()) {
+    return trimmed;
+  }
+  return '';
 }
 
 class _GalleryLoadingSkeleton extends StatelessWidget {

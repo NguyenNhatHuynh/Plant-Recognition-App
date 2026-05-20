@@ -21,6 +21,14 @@ class PlantReferenceImageService {
     return _cache.putIfAbsent(key, () => _loadImages(plant));
   }
 
+  static Future<String?> fetchPrimaryImageForPlant(Plant plant) async {
+    final images = await fetchImagesForPlant(plant);
+    if (images.isEmpty) {
+      return null;
+    }
+    return images.first;
+  }
+
   static Future<List<String>> _loadImages(Plant plant) async {
     final result = <String>[];
     final seen = <String>{};

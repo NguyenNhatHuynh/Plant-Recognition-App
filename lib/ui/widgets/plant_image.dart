@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../models/plant.dart';
+import '../../services/plant_reference_image_service.dart';
 
 class PlantImage extends StatelessWidget {
   final Plant plant;
@@ -22,32 +23,89 @@ class PlantImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imagePath = plant.imagePath.trim();
-    final child = imagePath.isEmpty
-        ? _Placeholder(height: height, width: width, label: plant.commonName)
-        : imagePath.startsWith('http')
-            ? Image.network(
-                imagePath,
-                height: height,
-                width: width,
-                fit: fit,
-                errorBuilder: (_, __, ___) =>
-                    _Placeholder(height: height, width: width, label: plant.commonName),
-              )
-            : Image.file(
-                File(imagePath),
-                height: height,
-                width: width,
-                fit: fit,
-                errorBuilder: (_, __, ___) =>
-                    _Placeholder(height: height, width: width, label: plant.commonName),
-              );
-
     return ClipRRect(
       borderRadius: borderRadius,
-      child: child,
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: FutureBuilder<_ResolvedPlantImage>(
+          future: _resolvePlantImage(plant),
+          builder: (context, snapshot) {
+            final resolved = snapshot.data;
+            if (resolved == null || resolved.path.isEmpty) {
+              return _Placeholder(
+                height: height,
+                width: width,
+                label: plant.commonName,
+              );
+            }
+
+            if (resolved.isNetwork) {
+              return Image.network(
+                resolved.path,
+                height: height,
+                width: width,
+                fit: fit,
+                errorBuilder: (_, __, ___) => _Placeholder(
+                  height: height,
+                  width: width,
+                  label: plant.commonName,
+                ),
+              );
+            }
+
+            return Image.file(
+              File(resolved.path),
+              height: height,
+              width: width,
+              fit: fit,
+              errorBuilder: (_, __, ___) => _Placeholder(
+                height: height,
+                width: width,
+                label: plant.commonName,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
+}
+
+Future<_ResolvedPlantImage> _resolvePlantImage(Plant plant) async {
+  final imagePath = plant.imagePath.trim();
+  if (imagePath.startsWith('http')) {
+    return _ResolvedPlantImage(path: imagePath, isNetwork: true);
+  }
+
+  if (imagePath.isNotEmpty) {
+    final file = File(imagePath);
+    if (await file.exists()) {
+      return _ResolvedPlantImage(path: imagePath, isNetwork: false);
+    }
+  }
+
+  final referenceImage =
+      await PlantReferenceImageService.fetchPrimaryImageForPlant(plant);
+  if (referenceImage != null && referenceImage.isNotEmpty) {
+    return _ResolvedPlantImage(path: referenceImage, isNetwork: true);
+  }
+
+  return const _ResolvedPlantImage.empty();
+}
+
+class _ResolvedPlantImage {
+  final String path;
+  final bool isNetwork;
+
+  const _ResolvedPlantImage({
+    required this.path,
+    required this.isNetwork,
+  });
+
+  const _ResolvedPlantImage.empty()
+    : path = '',
+      isNetwork = false;
 }
 
 class _Placeholder extends StatelessWidget {
