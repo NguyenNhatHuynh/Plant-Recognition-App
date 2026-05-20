@@ -56,11 +56,17 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
-      child: MaterialApp(
-        title: 'Nhận diện cây cối',
-        theme: appTheme(),
-        home: const SyncScope(child: AuthGate()),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<AppState>(
+        builder: (context, appState, _) {
+          return MaterialApp(
+            title: 'Nhận diện cây cối',
+            theme: appTheme(Brightness.light),
+            darkTheme: appTheme(Brightness.dark),
+            themeMode: appState.themeMode,
+            home: const SyncScope(child: AuthGate()),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

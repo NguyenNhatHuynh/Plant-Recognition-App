@@ -7,13 +7,18 @@ import '../../models/recognition_record.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../state/app_state.dart';
+import '../widgets/app_side_menu.dart';
 import '../widgets/favorite_action_button.dart';
 import '../widgets/plant_image.dart';
+import 'about_screen.dart';
 import 'favorites_screen.dart';
+import 'feedback_screen.dart';
 import 'history_screen.dart';
 import 'library_screen.dart';
 import 'plant_detail_screen.dart';
+import 'profile_screen.dart';
 import 'recognition_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,7 +76,112 @@ class _HomeScreenState extends State<HomeScreen>
       ..forward();
   }
 
+  String _displayNameForCurrentUser() {
+    final user = context.read<AuthService>().currentUser;
+    if (user == null) {
+      return 'Người dùng';
+    }
+
+    final metadata = user.userMetadata;
+    final candidates = <Object?>[
+      metadata?['display_name'],
+      metadata?['full_name'],
+      metadata?['name'],
+      user.email?.split('@').first,
+    ];
+
+    for (final candidate in candidates) {
+      final text = candidate?.toString().trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+
+    return 'Người dùng';
+  }
+
+  Future<void> _openHeaderMenu() async {
+    final authService = context.read<AuthService>();
+    final user = authService.currentUser;
+    final displayName = _displayNameForCurrentUser();
+    final email = user?.email?.trim().isNotEmpty == true
+        ? user!.email!.trim()
+        : 'Chưa có email';
+
+    final action = await showAppSideMenu(
+      context: context,
+      displayName: displayName,
+      email: email,
+      selectedAction: AppSideMenuAction.profile,
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case AppSideMenuAction.profile:
+        Navigator.push(context, ProfileScreen.route());
+      case AppSideMenuAction.library:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const LibraryScreen(),
+          ),
+        );
+      case AppSideMenuAction.history:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const HistoryScreen(),
+          ),
+        );
+      case AppSideMenuAction.settings:
+        Navigator.push(context, SettingsScreen.route());
+      case AppSideMenuAction.careGuide:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hướng dẫn chăm sóc sẽ sớm được hoàn thiện.'),
+          ),
+        );
+      case AppSideMenuAction.about:
+        Navigator.push(context, AboutScreen.route());
+      case AppSideMenuAction.feedback:
+        Navigator.push(context, FeedbackScreen.route());
+      case AppSideMenuAction.signOut:
+        _signOut();
+    }
+  }
+
   Future<void> _signOut() async {
+    final shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận đăng xuất'),
+        content: const Text(
+          'Bạn có chắc muốn đăng xuất khỏi tài khoản này không?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Ở lại'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB3261E),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Đăng xuất'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSignOut != true || !mounted) {
+      return;
+    }
+
     final authService = context.read<AuthService>();
     final messenger = ScaffoldMessenger.of(context);
     final errorColor = Theme.of(context).colorScheme.error;
@@ -171,25 +281,7 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _HomeHeader(
-                          onOpenLibrary: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LibraryScreen(),
-                              ),
-                            );
-                          },
-                          onOpenHistory: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HistoryScreen(),
-                              ),
-                            );
-                          },
-                          onSignOut: _signOut,
-                        ),
+                        _HomeHeader(onOpenMenu: _openHeaderMenu),
                         const SizedBox(height: 12),
                         Text(
                           'Chào người yêu cây!',
@@ -328,14 +420,10 @@ class _HomeScreenState extends State<HomeScreen>
 }
 
 class _HomeHeader extends StatelessWidget {
-  final VoidCallback onOpenLibrary;
-  final VoidCallback onOpenHistory;
-  final VoidCallback onSignOut;
+  final VoidCallback onOpenMenu;
 
   const _HomeHeader({
-    required this.onOpenLibrary,
-    required this.onOpenHistory,
-    required this.onSignOut,
+    required this.onOpenMenu,
   });
 
   @override
@@ -355,44 +443,40 @@ class _HomeHeader extends StatelessWidget {
             color: Colors.white,
           ),
         ),
+        const SizedBox(width: 10),
+        Text(
+          'Nhận Diện Cây Cối',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: const Color(0xFF185B43),
+                fontWeight: FontWeight.w800,
+              ),
+        ),
         const Spacer(),
-        PopupMenuButton<_HeaderAction>(
-          tooltip: 'Mở menu',
+        Material(
           color: Colors.white,
-          elevation: 10,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          onSelected: (value) {
-            switch (value) {
-              case _HeaderAction.library:
-                onOpenLibrary();
-              case _HeaderAction.history:
-                onOpenHistory();
-              case _HeaderAction.signOut:
-                onSignOut();
-            }
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
-              value: _HeaderAction.library,
-              child: Text('Thư viện'),
-            ),
-            PopupMenuItem(
-              value: _HeaderAction.history,
-              child: Text('Lịch sử'),
-            ),
-            PopupMenuItem(
-              value: _HeaderAction.signOut,
-              child: Text('Đăng xuất'),
-            ),
-          ],
-          child: const Padding(
-            padding: EdgeInsets.all(6),
-            child: Icon(
-              Icons.menu_rounded,
-              color: Color(0xFF185B43),
-              size: 26,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: onOpenMenu,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE4ECE6)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x12000000),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.menu_rounded,
+                color: Color(0xFF185B43),
+                size: 24,
+              ),
             ),
           ),
         ),
@@ -400,8 +484,6 @@ class _HomeHeader extends StatelessWidget {
     );
   }
 }
-
-enum _HeaderAction { library, history, signOut }
 
 class _HomeHeroCard extends StatelessWidget {
   final VoidCallback onScanNow;

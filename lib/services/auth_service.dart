@@ -46,6 +46,29 @@ class AuthService {
     await client.auth.signOut();
   }
 
+  Future<UserResponse> updatePassword({
+    required String newPassword,
+  }) async {
+    final client = _requireClient();
+    return client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
+  Future<UserResponse> updateDisplayName({
+    required String displayName,
+  }) async {
+    final client = _requireClient();
+    return client.auth.updateUser(
+      UserAttributes(
+        data: <String, dynamic>{
+          'display_name': displayName,
+          'full_name': displayName,
+        },
+      ),
+    );
+  }
+
   SupabaseClient _requireClient() {
     final client = _client;
     if (client == null) {
