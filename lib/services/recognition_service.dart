@@ -552,6 +552,9 @@ Quy tac:
     String? payload,
     StackTrace? stackTrace,
   }) {
+    if (!kDebugMode) {
+      return;
+    }
     developer.log(
       payload == null ? message : '$message\n$payload',
       name: 'RecognitionService',
