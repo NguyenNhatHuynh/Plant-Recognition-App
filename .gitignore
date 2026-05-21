@@ -49,4 +49,5 @@ app.*.map.json
 
 /note.md
 lib/utils/constants.dart
+supabase/.temp/
 
