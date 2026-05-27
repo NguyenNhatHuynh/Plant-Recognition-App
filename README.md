@@ -1,91 +1,154 @@
-# Ứng Dụng Nhận Diện Cây Cối
+# Plant Recognition App
 
-Ứng dụng Flutter giúp người dùng nhận diện cây từ ảnh chụp hoặc ảnh tải lên, lưu lịch sử tra cứu, đánh dấu cây yêu thích và xem thông tin chi tiết về từng loài cây.
+A Flutter application that recognizes plants from camera photos or uploaded images, stores scan history locally, lets users favorite plants, browse a plant library, and syncs user data through Supabase.
 
-## Mục tiêu
+<p align="center">
+  <img src="https://img.shields.io/badge/Flutter-Framework-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
+  <img src="https://img.shields.io/badge/Dart-Language-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart" />
+  <img src="https://img.shields.io/badge/Supabase-Backend-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
+  <img src="https://img.shields.io/badge/License-Private-lightgrey?style=for-the-badge" alt="License" />
+</p>
 
-- Nhận diện cây bằng ảnh từ camera hoặc thư viện ảnh
-- Hiển thị thông tin chi tiết về cây sau khi nhận diện
-- Lưu lịch sử nhận diện để xem lại
-- Hỗ trợ thư viện cây và danh sách yêu thích
-- Hoạt động mượt theo hướng `local-first` với `SQLite`
-- Đồng bộ dữ liệu người dùng qua `Supabase`
+<p align="center">
+  <img
+    src="https://placehold.co/1400x500/png?text=Plant+Recognition+App+Banner"
+    alt="Plant Recognition App banner"
+  />
+</p>
 
-## Tính năng chính
+## Overview
 
-- Chụp ảnh cây bằng camera
-- Chọn ảnh từ thư viện
-- Nhận diện cây bằng AI
-- Trang chi tiết cây với thông tin chăm sóc và ảnh tham khảo
-- Thư viện cây có tìm kiếm và lọc
-- Lịch sử nhận diện
-- Yêu thích
-- Hồ sơ người dùng
-- Đồng bộ nền giữa `SQLite` và `Supabase`
-- Giới hạn số lượt nhận diện mỗi ngày
+This project follows a local-first approach:
 
-## Kiến trúc hiện tại
+- Core data is stored in `SQLite` so the app stays fast and usable even with weak or unstable network
+- `Supabase Auth` handles sign up, sign in, password updates, and user sessions
+- `Supabase Database` is used to sync data across devices
+- Plant recognition is powered by `Gemini`, either directly in development or through a `Supabase Edge Function` in release mode
 
-Ứng dụng đang chạy theo mô hình:
+## Demo
 
-- `Flutter UI` cho giao diện và điều hướng
-- `SQLite` là nguồn dữ liệu hiển thị chính để app mượt và dùng được khi mạng yếu
-- `Supabase Auth` cho đăng ký, đăng nhập, đổi mật khẩu
-- `Supabase Database` để đồng bộ metadata người dùng và lịch sử
-- `Supabase Edge Function` làm backend nhận diện trong môi trường release
-- `Gemini` được gọi từ backend để tránh lộ API key trong bản phát hành
+### Video Demo
 
-Luồng chính:
+Demo video: [Watch the demo](https://your-video-demo-link-here)
 
-1. Người dùng đăng nhập
-2. Chụp ảnh hoặc chọn ảnh
-3. App gọi backend nhận diện
-4. Backend gọi Gemini và trả kết quả về app
-5. App lưu dữ liệu vào `SQLite`
-6. `SyncService` đồng bộ dữ liệu lên `Supabase`
+### App Banner
 
-## Cấu trúc thư mục
+![Plant Recognition App banner](https://your-image-link-here)
 
-```text
-lib/
-  bootstrap/          Khởi tạo cấu hình và services
-  config/             Đọc biến môi trường
-  models/             Model dữ liệu
-  services/           Auth, database, recognition, sync
-  state/              AppState dùng chung
-  theme/              Light mode / Dark mode
-  ui/
-    screens/          Các màn hình chính
-    widgets/          Widget tái sử dụng
+### Screenshots
 
-supabase/
-  functions/
-    recognize/        Edge Function nhận diện cây
-  sync_setup.sql      SQL tạo bảng và quota server-side
-```
+<table>
+  <tr>
+    <td align="center">
+      <img src="./Screenshot_1779855227.png" alt="Auth screen" width="220" />
+      <br />
+      <sub><b>Auth</b></sub>
+    </td>
+    <td align="center">
+      <img src="https://your-recognition-screen-image-link-here" alt="Recognition screen" width="220" />
+      <br />
+      <sub><b>Recognition</b></sub>
+    </td>
+    <td align="center">
+      <img src="https://your-detail-screen-image-link-here" alt="Detail screen" width="220" />
+      <br />
+      <sub><b>Detail</b></sub>
+    </td>
+  </tr>
+</table>
 
-## Công nghệ sử dụng
+## Features
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <ul>
+        <li>Capture photos with the camera</li>
+        <li>Pick images from the gallery</li>
+        <li>Recognize plants with AI</li>
+        <li>View plant details with care guidance, growing conditions, and reference notes</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <ul>
+        <li>Browse a plant library with search and filters</li>
+        <li>View recognition history</li>
+        <li>Mark plants as favorites</li>
+        <li>Manage user profile and authentication</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <ul>
+        <li>Sync data between <code>SQLite</code> and <code>Supabase</code></li>
+        <li>Enforce a daily recognition limit</li>
+        <li>Support light and dark themes</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <ul>
+        <li>Local-first architecture for responsive UX</li>
+        <li>Release-safe recognition flow through backend</li>
+        <li>Reusable service and state layer</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## Architecture
+
+Main flow:
+
+1. The user opens the app
+2. `AppBootstrap` loads environment values and initializes services
+3. `AuthGate` decides whether to show the auth screen or the main app
+4. The user selects or captures an image
+5. `RecognitionScreen` sends the image to the recognition layer
+6. The recognition layer returns a plant result from Gemini or the backend
+7. The app saves the result to `SQLite`
+8. `SyncScope` and `SyncService` sync local changes to `Supabase`
+
+### Main Layers
+
+- `lib/bootstrap` - App startup and service initialization
+- `lib/config` - Environment configuration
+- `lib/models` - Data models
+- `lib/services` - Auth, database, recognition, and sync logic
+- `lib/state` - Shared app state
+- `lib/theme` - Light and dark themes
+- `lib/ui` - Screens and reusable widgets
+
+## Tech Stack
 
 - Flutter
 - Dart
 - Provider
-- SQLite (`sqflite`)
-- Supabase
-- Gemini
-- HTTP
+- `sqflite`
+- `path`
+- `image_picker`
+- `http`
+- `path_provider`
+- `url_launcher`
+- `flutter_dotenv`
+- `supabase_flutter`
+- `camera`
+- `google_fonts`
+- `flutter_spinkit`
+- `lottie`
 
-## Yêu cầu môi trường
+## Environment Requirements
 
 - Flutter SDK
 - Dart SDK
-- Android Studio hoặc VS Code
-- Tài khoản Supabase
-- API key Gemini
-- Supabase CLI nếu muốn chạy Edge Function local hoặc deploy function
+- Android Studio or VS Code
+- Supabase account
+- Gemini API key
+- Supabase CLI if you want to run or deploy the Edge Function locally
 
-## Biến môi trường
+## Environment Setup
 
-Tạo file `.env` ở root project:
+Create a `.env` file at the project root:
 
 ```env
 SUPABASE_URL=
@@ -94,135 +157,31 @@ GEMINI_API_KEY=
 RECOGNITION_API_BASE_URL=
 ```
 
-### Ý nghĩa từng biến
+### Variable Reference
 
-- `SUPABASE_URL`: URL project Supabase
-- `SUPABASE_PUBLISHABLE_KEY`: Publishable key của Supabase
-- `GEMINI_API_KEY`: Chỉ dùng cho dev direct hoặc backend secrets
-- `RECOGNITION_API_BASE_URL`: Base URL của backend nhận diện
+| Variable | Description |
+| --- | --- |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
+| `GEMINI_API_KEY` | Used for direct dev calls or backend secrets |
+| `RECOGNITION_API_BASE_URL` | Base URL of the recognition backend |
 
-## Lấy value cho từng biến
-
-### 1. `SUPABASE_URL`
-
-Vào:
-
-- `Supabase Dashboard`
-- `Project Settings`
-- `API`
-
-Lấy giá trị ở mục:
-
-- `Project URL`
-
-Ví dụ:
+### Example Values
 
 ```env
 SUPABASE_URL=https://your-project-ref.supabase.co
-```
-
-### 2. `SUPABASE_PUBLISHABLE_KEY`
-
-Vào:
-
-- `Supabase Dashboard`
-- `Project Settings`
-- `API`
-
-Lấy giá trị ở mục:
-
-- `Publishable key`
-
-Ví dụ:
-
-```env
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxxx
-```
-
-### 3. `GEMINI_API_KEY`
-
-Lấy từ Google AI Studio hoặc Google AI API project của bạn.
-
-Lưu ý:
-
-- Trong môi trường `release`, không nên để key này trong app
-- Key này nên được đưa vào `Supabase secrets` để backend dùng
-
-### 4. `RECOGNITION_API_BASE_URL`
-
-Biến này là nơi app gọi backend nhận diện.
-
-Bạn sẽ điền khác nhau theo từng mode:
-
-#### Dev direct Gemini
-
-Nếu đang chạy dev và chưa deploy backend:
-
-```env
-RECOGNITION_API_BASE_URL=
-```
-
-Lúc này app dev có thể gọi Gemini trực tiếp.
-
-#### Dev local backend
-
-Nếu đang chạy local Edge Function:
-
-```env
-RECOGNITION_API_BASE_URL=http://127.0.0.1:54321/functions/v1
-```
-
-App sẽ gọi endpoint:
-
-```text
-http://127.0.0.1:54321/functions/v1/recognize
-```
-
-#### Backend production
-
-Nếu đã deploy Edge Function lên Supabase:
-
-```env
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxxxxx
+GEMINI_API_KEY=your_gemini_api_key
 RECOGNITION_API_BASE_URL=https://your-project-ref.functions.supabase.co
 ```
 
-App sẽ gọi:
+Notes:
 
-```text
-https://your-project-ref.functions.supabase.co/recognize
-```
+- `AppConfig` reads values from `.env` first
+- If `.env` is not bundled into the app, the app falls back to `--dart-define`
+- The app also accepts `SUPABASE_ANON_KEY` as an alternative to `SUPABASE_PUBLISHABLE_KEY`
 
-### Làm sao để lấy đúng value `RECOGNITION_API_BASE_URL`?
-
-Sau khi deploy function bằng:
-
-```bash
-supabase functions deploy recognize
-```
-
-Base URL sẽ theo format:
-
-```text
-https://<project-ref>.functions.supabase.co
-```
-
-Trong đó:
-
-- `<project-ref>` là mã project Supabase của bạn
-
-Ví dụ project URL là:
-
-```text
-https://qtretjocwhoywgrolkvo.supabase.co
-```
-
-thì:
-
-```env
-RECOGNITION_API_BASE_URL=https://qtretjocwhoywgrolkvo.functions.supabase.co
-```
-
-## Cài đặt project
+## Installation
 
 ```bash
 git clone <repo-url>
@@ -230,11 +189,13 @@ cd Plant-Recognition-App
 flutter pub get
 ```
 
-## Chạy app ở môi trường dev
+## Running the App
 
-### Cách 1: Dev direct Gemini
+The app supports two recognition modes:
 
-Phù hợp để test nhanh khi chưa dựng backend.
+### 1. Direct Gemini Access for Development
+
+Good for quick testing before setting up a backend.
 
 `.env`:
 
@@ -245,15 +206,15 @@ GEMINI_API_KEY=your_gemini_key
 RECOGNITION_API_BASE_URL=
 ```
 
-Chạy:
+Run the app:
 
 ```bash
 flutter run --dart-define-from-file=.env -d <deviceId>
 ```
 
-### Cách 2: Dev với backend local
+### 2. Local Backend Development
 
-Phù hợp để test gần production hơn.
+Useful when you want a setup that is closer to production.
 
 `.env`:
 
@@ -264,50 +225,50 @@ GEMINI_API_KEY=
 RECOGNITION_API_BASE_URL=http://127.0.0.1:54321/functions/v1
 ```
 
-Chạy local Supabase function:
+Start Supabase locally:
 
 ```bash
 supabase start
 supabase functions serve recognize --env-file supabase/functions/.env.local
 ```
 
-Sau đó chạy app:
+Then run the app:
 
 ```bash
 flutter run --dart-define-from-file=.env -d <deviceId>
 ```
 
-## Thiết lập backend nhận diện
+## Backend Setup
 
-### 1. Chạy SQL trên Supabase
+### 1. Create Tables and RPC on Supabase
 
-Mở `SQL Editor` và chạy file:
+Run:
 
 ```text
 supabase/sync_setup.sql
 ```
 
-File này tạo:
+This script creates:
 
 - `user_plants`
 - `user_recognition_records`
 - `user_recognition_daily_usage`
-- RPC quota `consume_recognition_daily_quota(...)`
+- RPC `consume_recognition_daily_quota(...)`
 
-### 2. Cài Supabase CLI
+### 2. Install Supabase CLI
 
 ```bash
 npm install -g supabase
 ```
 
-### 3. Đăng nhập và link project
+### 3. Login and Link the Project
 
 ```bash
 supabase login
 supabase link --project-ref <project-ref>
 ```
 
-### 4. Set secrets cho Edge Function
+### 4. Set Edge Function Secrets
 
 ```bash
 supabase secrets set GEMINI_API_KEY=your_gemini_key
@@ -317,61 +278,87 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 supabase secrets set DAILY_RECOGNITION_LIMIT=15
 ```
 
-### 5. Deploy function
+### 5. Deploy the Function
 
 ```bash
 supabase functions deploy recognize
 ```
 
-## Lưu ý rất quan trọng về release
+## Release Notes
 
-Ở bản phát hành, app đã chặn gọi Gemini trực tiếp từ client.
+In release builds, the app should not call Gemini directly from the client.
 
-Nghĩa là:
+If `RECOGNITION_API_BASE_URL` is not configured, recognition will not work in release mode.
 
-- Nếu chưa deploy backend
-- Hoặc chưa cấu hình `RECOGNITION_API_BASE_URL`
+In short:
 
-thì tính năng nhận diện **sẽ không hoạt động trong release**.
+- Dev builds can use Gemini directly
+- Production should go through `Supabase Edge Function`
+- Gemini API keys should stay on the backend, not inside the release app
 
-Vì vậy hiện tại chỉ nên hiểu là:
-
-- App đã đi đúng kiến trúc cho production
-- Nhưng chỉ thật sự sẵn sàng vận hành khi backend đã được deploy và cấu hình hoàn chỉnh
-
-## Chạy test
+## Testing
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Trạng thái hiện tại
+## Run Locally
 
-Ứng dụng hiện đã có:
+```bash
+git clone <repo-url>
+cd Plant-Recognition-App
+flutter pub get
+flutter run --dart-define-from-file=.env -d <deviceId>
+```
 
-- giao diện chính khá đầy đủ
-- đăng nhập, đăng ký, đổi mật khẩu
-- thư viện, lịch sử, yêu thích, profile
-- local database
-- đồng bộ nền với Supabase
-- skeleton backend nhận diện
+If you are using a Supabase-backed recognition flow, make sure these are configured before running:
 
-Các phần vẫn cần hoàn thiện thêm trước khi lên Play Store chính thức:
+```env
+SUPABASE_URL=...
+SUPABASE_PUBLISHABLE_KEY=...
+RECOGNITION_API_BASE_URL=...
+```
 
-- đổi `applicationId` khỏi `com.example...`
-- cấu hình release signing thật
-- deploy backend nhận diện
-- bỏ hoàn toàn Gemini key khỏi client release
-- cập nhật app icon, app name, store listing
-- hoàn thiện README, privacy policy và ảnh chụp màn hình
+## Project Structure
 
-## Gợi ý môi trường sử dụng
+```text
+lib/
+  bootstrap/          App startup and service initialization
+  config/             Environment configuration
+  models/             Data models
+  services/           Auth, database, recognition, sync
+  state/              Shared app state
+  theme/              Light and dark themes
+  ui/
+    screens/          Main screens
+    widgets/          Reusable widgets
 
-- `Demo / nội bộ`: đã dùng được
-- `Beta nhỏ`: có thể dùng sau khi backend chạy ổn
-- `Play Store chính thức`: nên hoàn thiện thêm phần release config và backend production
+supabase/
+  functions/
+    recognize/        Plant recognition Edge Function
+  sync_setup.sql      Database schema and quota setup
+```
 
-## Tác giả
+## Current Status
+
+The app currently includes:
+
+- Main UI
+- Sign in, sign up, and password change
+- Library, history, favorites, and profile screens
+- Local storage using `SQLite`
+- Background sync with `Supabase`
+- A recognition backend scaffold
+
+Still recommended before official release:
+
+- Rename `applicationId` from `com.example...`
+- Configure release signing
+- Deploy the recognition backend
+- Finish app icon, app name, and store listing
+- Add a privacy policy if publishing to a store
+
+## Author
 
 Xoan Dev
