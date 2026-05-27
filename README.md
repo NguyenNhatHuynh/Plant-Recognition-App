@@ -11,7 +11,7 @@ A Flutter application that recognizes plants from camera photos or uploaded imag
 
 <p align="center">
   <img
-    src="https://placehold.co/1400x500/png?text=Plant+Recognition+App+Banner"
+    src="docs/images/banner.png"
     alt="Plant Recognition App banner"
   />
 </p>
@@ -31,28 +31,19 @@ This project follows a local-first approach:
 
 Demo video: [Watch the demo](https://your-video-demo-link-here)
 
-### App Banner
-
-![Plant Recognition App banner](https://your-image-link-here)
-
 ### Screenshots
 
 <table>
   <tr>
     <td align="center">
-      <img src="./Screenshot_1779855227.png" alt="Auth screen" width="220" />
+      <img src="docs/images/home-screen.png" alt="Home screen" width="220" />
       <br />
-      <sub><b>Auth</b></sub>
+      <sub><b>Home</b></sub>
     </td>
     <td align="center">
-      <img src="https://your-recognition-screen-image-link-here" alt="Recognition screen" width="220" />
+      <img src="docs/images/library-screen.png" alt="Library screen" width="220" />
       <br />
-      <sub><b>Recognition</b></sub>
-    </td>
-    <td align="center">
-      <img src="https://your-detail-screen-image-link-here" alt="Detail screen" width="220" />
-      <br />
-      <sub><b>Detail</b></sub>
+      <sub><b>Library</b></sub>
     </td>
   </tr>
 </table>
