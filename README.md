@@ -29,7 +29,7 @@ This project follows a local-first approach:
 
 ### Video Demo
 
-Demo video: [Watch the demo](https://your-video-demo-link-here)
+Demo video: [Watch the demo](https://www.youtube.com/@xoandev)
 
 ### Screenshots
 
